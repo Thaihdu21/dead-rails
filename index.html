@@ -1,0 +1,114 @@
+<!-- === index.html === -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Dead Rails — Web Clone</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game-container">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div id="hud-top-left">
+      <div class="bar-label">FUEL</div>
+      <div class="bar fuel-bar"><div class="bar-fill" id="fuel-fill"></div></div>
+      <div id="speed-text">0 km/h</div>
+    </div>
+
+    <div id="hud-top-center">
+      <div id="distance-text">0.0 / 80 km</div>
+      <div id="time-text">Day 1 — 06:00</div>
+    </div>
+
+    <div id="hud-top-right">
+      <div id="money-text">$0</div>
+      <div id="class-text">Class: None</div>
+    </div>
+
+    <div id="hud-bottom-left">
+      <div class="bar-label">HP</div>
+      <div class="bar hp-bar"><div class="bar-fill" id="hp-fill"></div></div>
+      <div class="bar-label">STAMINA</div>
+      <div class="bar stamina-bar"><div class="bar-fill" id="stamina-fill"></div></div>
+    </div>
+
+    <div id="hud-bottom-center">
+      <div id="crosshair">+</div>
+      <div id="weapon-info">Fists</div>
+    </div>
+
+    <div id="hud-bottom-right">
+      <div id="inventory-grid"></div>
+    </div>
+
+    <div id="minimap-wrap">
+      <canvas id="minimap" width="160" height="160"></canvas>
+    </div>
+
+    <div id="toast-container"></div>
+    <div id="interaction-prompt" class="hidden">[F] Interact</div>
+  </div>
+
+  <!-- ============ MENU ============ -->
+  <div id="menu-screen">
+    <div class="menu-content">
+      <h1>DEAD RAILS</h1>
+      <p class="subtitle">1899 — The plague spreads across the Americas. Board the train. Reach Mexico. Find the cure.</p>
+      <div class="class-grid">
+        <button class="class-card selected" data-class="none">
+          <h3>None</h3><p>No buffs. Pure survival. Hardest path.</p>
+        </button>
+        <button class="class-card" data-class="doctor">
+          <h3>Doctor</h3><p>+50% heal. Start with bandages.</p>
+        </button>
+        <button class="class-card" data-class="soldier">
+          <h3>Soldier</h3><p>+25% damage. Start with rifle.</p>
+        </button>
+        <button class="class-card" data-class="outlaw">
+          <h3>Outlaw</h3><p>+20% speed. Strong melee.</p>
+        </button>
+        <button class="class-card" data-class="highroller">
+          <h3>High Roller</h3><p>Better loot rolls. Lightning is lethal.</p>
+        </button>
+      </div>
+      <button id="start-btn">BOARD THE TRAIN</button>
+      <p class="hint">WASD move · Mouse look · Click attack · F interact · R reload · E turret · Shift sprint</p>
+    </div>
+  </div>
+
+  <!-- ============ SHOP ============ -->
+  <div id="shop-screen" class="hidden">
+    <div class="shop-content">
+      <h2>GENERAL STORE</h2>
+      <div id="shop-money">You have: $0</div>
+      <div id="shop-items"></div>
+      <button id="shop-close">LEAVE [F]</button>
+    </div>
+  </div>
+
+  <!-- ============ GAME OVER ============ -->
+  <div id="game-over-screen" class="hidden">
+    <div class="menu-content">
+      <h1 id="go-title">YOU DIED</h1>
+      <div id="go-stats"></div>
+      <button id="restart-btn">TRY AGAIN</button>
+    </div>
+  </div>
+
+  <div id="pause-hint" class="hidden">Click to capture mouse · ESC to release</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
