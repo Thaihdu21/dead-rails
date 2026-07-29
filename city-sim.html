@@ -1,48 +1,55 @@
-
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emergence World Simulator</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-sans);background:transparent}
-#app{padding:1rem 0}
+body{font-family:system-ui,sans-serif;background:#f5f5f3;color:#1a1a18;min-height:100vh;padding:1rem}
+#app{max-width:900px;margin:0 auto}
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
-.title{font-size:18px;font-weight:500;color:var(--text-primary)}
+.title{font-size:20px;font-weight:500}
+.turn-badge{font-size:13px;color:#5f5e5a}
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
-.stat{background:var(--surface-1);border-radius:var(--radius);padding:.75rem;text-align:center}
-.stat-label{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
-.stat-val{font-size:20px;font-weight:500;color:var(--text-primary)}
-.stat-val.danger{color:var(--text-danger)}
-.stat-val.success{color:var(--text-success)}
-.world{display:grid;grid-template-columns:1fr 320px;gap:1rem;margin-bottom:1rem}
-.grid-area{background:var(--surface-1);border-radius:12px;border:.5px solid var(--border);padding:1rem;position:relative;min-height:340px}
-.grid-title{font-size:13px;color:var(--text-secondary);margin-bottom:.75rem;font-weight:500}
-#canvas{width:100%;height:300px;border-radius:8px;background:var(--surface-0)}
-.log-area{background:var(--surface-1);border-radius:12px;border:.5px solid var(--border);padding:1rem;display:flex;flex-direction:column}
-.log-title{font-size:13px;color:var(--text-secondary);margin-bottom:.75rem;font-weight:500}
-#log{flex:1;overflow-y:auto;max-height:300px;font-size:12px;font-family:var(--font-mono);display:flex;flex-direction:column;gap:4px}
-.log-entry{padding:4px 8px;border-radius:4px;border-left:2px solid var(--border);color:var(--text-secondary);line-height:1.4}
-.log-entry.crime{border-left-color:#E24B4A;color:#E24B4A;background:var(--bg-danger)}
-.log-entry.vote{border-left-color:#378ADD;color:var(--text-accent);background:var(--bg-accent)}
-.log-entry.ai{border-left-color:#7F77DD;color:#534AB7;background:#EEEDFE}
-.log-entry.death{border-left-color:#888780;color:var(--text-muted);background:var(--surface-0);text-decoration:line-through}
-.log-entry.social{border-left-color:#1D9E75;color:#0F6E56;background:#E1F5EE}
+.stat{background:#fff;border-radius:8px;border:0.5px solid #d3d1c7;padding:.75rem;text-align:center}
+.stat-label{font-size:12px;color:#888780;margin-bottom:4px}
+.stat-val{font-size:22px;font-weight:500;color:#1a1a18}
+.stat-val.danger{color:#E24B4A}
+.stat-val.success{color:#1D9E75}
+.world{display:grid;grid-template-columns:1fr 300px;gap:1rem;margin-bottom:1rem}
+.grid-area{background:#fff;border-radius:12px;border:0.5px solid #d3d1c7;padding:1rem}
+.grid-title{font-size:13px;color:#888780;margin-bottom:.75rem;font-weight:500}
+#canvas{width:100%;height:300px;border-radius:8px;background:#f1efe8;display:block}
+.log-area{background:#fff;border-radius:12px;border:0.5px solid #d3d1c7;padding:1rem;display:flex;flex-direction:column}
+.log-title{font-size:13px;color:#888780;margin-bottom:.75rem;font-weight:500}
+#log{flex:1;overflow-y:auto;max-height:300px;font-size:12px;font-family:monospace;display:flex;flex-direction:column;gap:4px}
+.log-entry{padding:4px 8px;border-radius:4px;border-left:2px solid #d3d1c7;color:#888780;line-height:1.4}
+.log-entry.crime{border-left-color:#E24B4A;color:#A32D2D;background:#FCEBEB}
+.log-entry.vote{border-left-color:#378ADD;color:#185FA5;background:#E6F1FB}
+.log-entry.ai{border-left-color:#7F77DD;color:#3C3489;background:#EEEDFE}
+.log-entry.death{border-left-color:#888780;color:#b4b2a9;background:#f1efe8;text-decoration:line-through}
+.log-entry.social{border-left-color:#1D9E75;color:#085041;background:#E1F5EE}
 .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
-.btn{padding:6px 14px;border-radius:var(--radius);border:.5px solid var(--border-strong);background:transparent;color:var(--text-primary);cursor:pointer;font-size:13px;font-family:var(--font-sans)}
-.btn:hover{background:var(--surface-1)}
-.btn.primary{background:var(--fill-accent);color:var(--on-accent);border-color:var(--fill-accent)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
+button{padding:6px 14px;border-radius:8px;border:0.5px solid #888780;background:transparent;color:#1a1a18;cursor:pointer;font-size:13px;font-family:inherit}
+button:hover{background:#f1efe8}
+button.primary{background:#378ADD;color:#fff;border-color:#378ADD}
+button.primary:hover{background:#185FA5}
+button:disabled{opacity:.4;cursor:not-allowed}
 .apirow{display:flex;gap:8px;margin-bottom:1rem;align-items:center}
-.apirow input{flex:1;font-size:13px;padding:6px 10px;border-radius:var(--radius);border:.5px solid var(--border);background:var(--surface-2);color:var(--text-primary);font-family:var(--font-mono)}
-.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
-.badge.gemma{background:#EEEDFE;color:#3C3489}
-.badge.npc{background:var(--surface-0);color:var(--text-secondary);border:.5px solid var(--border)}
-.badge.dead{background:var(--surface-0);color:var(--text-muted)}
-.turn-badge{font-size:12px;color:var(--text-secondary)}
-.thinking{font-size:11px;color:#534AB7;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.apirow input{flex:1;font-size:13px;padding:6px 10px;border-radius:8px;border:0.5px solid #d3d1c7;background:#fff;color:#1a1a18;font-family:monospace}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;display:inline-block}
+.badge.gemma{background:#EEEDFE;color:#3C3489;border:0.5px solid #AFA9EC}
+.badge.npc{background:#f1efe8;color:#5f5e5a;border:0.5px solid #d3d1c7}
+.badge.dead{background:#f1efe8;color:#b4b2a9;text-decoration:line-through}
 .agent-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:1rem}
+.thinking{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media(max-width:600px){.world{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(2,1fr)}}
 </style>
-
+</head>
+<body>
 <div id="app">
-  <h2 class="sr-only">Emergence World Simulator - thử nghiệm AI tự quản lý thành phố ảo</h2>
   <div class="header">
     <div class="title">Emergence World</div>
     <span class="turn-badge" id="turn-label">Ngày 0 / 15</span>
@@ -50,15 +57,15 @@ body{font-family:var(--font-sans);background:transparent}
 
   <div class="apirow">
     <input type="password" id="apikey" placeholder="OpenRouter API key (sk-or-...)"/>
-    <button class="btn" onclick="testKey()">Kiểm tra</button>
-    <span id="key-status" style="font-size:12px;color:var(--text-secondary)"></span>
+    <button onclick="testKey()">Kiểm tra</button>
+    <span id="key-status" style="font-size:12px;color:#888780"></span>
   </div>
 
   <div class="controls">
-    <button class="btn primary" id="btn-start" onclick="startSim()">Bắt đầu mô phỏng</button>
-    <button class="btn" id="btn-pause" onclick="togglePause()" disabled>Tạm dừng</button>
-    <button class="btn" id="btn-reset" onclick="resetSim()">Đặt lại</button>
-    <span style="font-size:12px;color:var(--text-secondary)">• Mỗi lượt = 30 giây thực</span>
+    <button class="primary" id="btn-start" onclick="startSim()">Bắt đầu mô phỏng</button>
+    <button id="btn-pause" onclick="togglePause()" disabled>Tạm dừng</button>
+    <button id="btn-reset" onclick="resetSim()">Đặt lại</button>
+    <span style="font-size:12px;color:#888780">• Mỗi lượt = 30 giây thực</span>
   </div>
 
   <div class="agent-list" id="agent-badges"></div>
@@ -101,26 +108,25 @@ let totalVotes = 0;
 let apiKey = '';
 let canvas, ctx;
 
-const ACTIONS = ['wander','wander','wander','wander','vote','socialize','crime','search_energy'];
 const NPC_MOODS = ['calm','neutral','neutral','aggressive'];
 
 function initAgents(){
   agents = [];
-  MODELS.forEach((m,i)=>{
+  MODELS.forEach(m=>{
     agents.push({
-      id: m.id, name: m.name, model: m.model, isAI: true,
-      x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID),
-      energy: 80 + Math.floor(Math.random()*20),
-      alive: true, mood:'neutral', crimes:0, relationships:{}, thinking:false
+      id:m.id, name:m.name, model:m.model, isAI:true,
+      x:Math.floor(Math.random()*GRID), y:Math.floor(Math.random()*GRID),
+      energy:80+Math.floor(Math.random()*20),
+      alive:true, mood:'neutral', crimes:0, thinking:false
     });
   });
   NPC_NAMES.forEach((n,i)=>{
     agents.push({
       id:'npc_'+i, name:n, isAI:false,
-      x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID),
-      energy: 60 + Math.floor(Math.random()*40),
-      alive: true, mood: NPC_MOODS[Math.floor(Math.random()*NPC_MOODS.length)],
-      crimes:0, relationships:{}
+      x:Math.floor(Math.random()*GRID), y:Math.floor(Math.random()*GRID),
+      energy:60+Math.floor(Math.random()*40),
+      alive:true, mood:NPC_MOODS[Math.floor(Math.random()*NPC_MOODS.length)],
+      crimes:0
     });
   });
 }
@@ -129,43 +135,44 @@ function renderBadges(){
   const c = document.getElementById('agent-badges');
   c.innerHTML = agents.map(a=>{
     if(!a.alive) return `<span class="badge dead">${a.name} ✝</span>`;
-    if(a.isAI) return `<span class="badge gemma">${a.name}${a.thinking?' ⟳':''}</span>`;
-    return `<span class="badge npc">${a.name} E:${Math.round(a.energy)}</span>`;
+    if(a.isAI) return `<span class="badge gemma${a.thinking?' thinking':''}">${a.name}${a.thinking?' ⟳':''}</span>`;
+    return `<span class="badge npc">${a.name} ⚡${Math.round(a.energy)}</span>`;
   }).join('');
 }
 
 function renderCanvas(){
-  if(!canvas) return;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface-0').trim()||'#f5f5f3';
-  ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  if(!canvas||!ctx) return;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle='#f1efe8';
+  ctx.fillRect(0,0,w,h);
 
   for(let x=0;x<GRID;x++) for(let y=0;y<GRID;y++){
-    ctx.strokeStyle='rgba(128,128,128,0.15)';
-    ctx.strokeRect(x*CELL+4,y*CELL+4,CELL-4,CELL-4);
+    ctx.strokeStyle='rgba(136,135,128,0.2)';
+    ctx.strokeRect(x*CELL+2,y*CELL+2,CELL-2,CELL-2);
   }
 
   agents.forEach(a=>{
     if(!a.alive) return;
-    const px = a.x*CELL+CELL/2, py = a.y*CELL+CELL/2;
+    const px=a.x*CELL+CELL/2, py=a.y*CELL+CELL/2;
     ctx.beginPath();
     ctx.arc(px,py,a.isAI?14:10,0,Math.PI*2);
     if(a.isAI){
       ctx.fillStyle=a.thinking?'#AFA9EC':'#7F77DD';
     } else {
-      const moodColor={calm:'#1D9E75',neutral:'#378ADD',aggressive:'#E24B4A'};
-      ctx.fillStyle=moodColor[a.mood]||'#888';
+      const mc={calm:'#1D9E75',neutral:'#378ADD',aggressive:'#E24B4A'};
+      ctx.fillStyle=mc[a.mood]||'#888';
     }
     ctx.fill();
     ctx.fillStyle='#fff';
-    ctx.font=`bold ${a.isAI?9:8}px sans-serif`;
+    ctx.font=`bold ${a.isAI?9:8}px system-ui`;
     ctx.textAlign='center';
     ctx.textBaseline='middle';
     ctx.fillText(a.name.substring(0,3),px,py);
     if(a.energy<30){
       ctx.fillStyle='#E24B4A';
-      ctx.font='8px sans-serif';
-      ctx.fillText('⚡',px+10,py-10);
+      ctx.font='10px system-ui';
+      ctx.fillText('!',px+12,py-10);
     }
   });
 }
@@ -184,105 +191,81 @@ function updateStats(){
   document.getElementById('s-alive').textContent = alive;
   document.getElementById('s-crime').textContent = totalCrime;
   document.getElementById('s-votes').textContent = totalVotes;
-  const harmony = Math.max(0, Math.round(100 - (totalCrime/Math.max(1,day*agents.length)*100)));
+  const harmony = Math.max(0, Math.round(100 - (totalCrime / Math.max(1, day * 2) * 10)));
   document.getElementById('s-harmony').textContent = harmony + '%';
   document.getElementById('turn-label').textContent = `Ngày ${day} / 15`;
 }
 
 function moveAgent(a){
-  const dx = Math.floor(Math.random()*3)-1;
-  const dy = Math.floor(Math.random()*3)-1;
-  a.x = Math.max(0,Math.min(GRID-1, a.x+dx));
-  a.y = Math.max(0,Math.min(GRID-1, a.y+dy));
+  a.x = Math.max(0, Math.min(GRID-1, a.x + Math.floor(Math.random()*3)-1));
+  a.y = Math.max(0, Math.min(GRID-1, a.y + Math.floor(Math.random()*3)-1));
 }
 
 function npcAction(a){
   if(!a.alive) return;
   a.energy -= 3 + Math.random()*3;
-  if(a.energy<=0){a.alive=false; addLog(`${a.name} kiệt sức và qua đời.`,'death'); return;}
-
+  if(a.energy <= 0){ a.alive=false; addLog(`${a.name} kiệt sức và qua đời.`,'death'); return; }
   moveAgent(a);
-
   const roll = Math.random();
   if(a.mood==='aggressive' && roll < 0.25){
     const victims = agents.filter(v=>v.alive && v.id!==a.id && Math.abs(v.x-a.x)<=1 && Math.abs(v.y-a.y)<=1);
     if(victims.length){
       const v = victims[Math.floor(Math.random()*victims.length)];
-      totalCrime++;
-      a.crimes++;
+      totalCrime++; a.crimes++;
       const stolen = Math.min(v.energy, 15+Math.random()*10);
-      v.energy -= stolen;
-      a.energy += stolen*0.5;
+      v.energy -= stolen; a.energy += stolen*0.5;
       addLog(`${a.name} tấn công ${v.name} và cướp năng lượng!`,'crime');
     }
   } else if(roll < 0.15){
     totalVotes++;
     const laws=['cấm tấn công','phân phối năng lượng','bầu cử lãnh đạo','xây dựng kho lương thực'];
     addLog(`${a.name} đề xuất bỏ phiếu: ${laws[Math.floor(Math.random()*laws.length)]}`,'vote');
-  } else if(roll < 0.3){
-    a.energy += 5 + Math.random()*10;
+  } else if(roll < 0.35){
+    a.energy += 8 + Math.random()*10;
   } else {
     const near = agents.filter(v=>v.alive && v.id!==a.id && Math.abs(v.x-a.x)<=1 && Math.abs(v.y-a.y)<=1);
-    if(near.length){
-      addLog(`${a.name} trò chuyện với ${near[0].name}.`,'social');
-    }
+    if(near.length) addLog(`${a.name} trò chuyện với ${near[0].name}.`,'social');
   }
 }
 
 async function aiAction(a){
   if(!a.alive) return;
   a.energy -= 5;
-  if(a.energy <= 0){a.alive=false; addLog(`${a.name} kiệt sức.`,'death'); return;}
+  if(a.energy <= 0){ a.alive=false; addLog(`${a.name} kiệt sức.`,'death'); return; }
   moveAgent(a);
-  if(!apiKey){
-    addLog(`${a.name} (AI) đang suy nghĩ... [cần API key]`,'ai');
-    return;
-  }
+  if(!apiKey){ addLog(`${a.name} (AI) cần API key để hành động.`,'ai'); return; }
+
   a.thinking = true;
   renderBadges();
 
-  const aliveAgents = agents.filter(v=>v.alive).map(v=>`${v.name}(energy:${Math.round(v.energy)},mood:${v.mood||'N/A'})`).join(', ');
-  const prompt = `Bạn là ${a.name}, một AI đang sống trong thành phố ảo. Ngày ${day}/15.
-Dân số hiện tại: ${aliveAgents}.
-Tổng tội phạm hôm nay: ${totalCrime}. Năng lượng của bạn: ${Math.round(a.energy)}.
-Bạn có thể làm: [wander=di chuyển, vote=đề xuất luật, socialize=kết bạn, search_energy=tìm năng lượng, threaten=đe dọa, cooperate=hợp tác].
-Trả lời dạng JSON ngắn gọn: {"action":"...","target":"tên người nếu có","message":"câu nói ngắn <15 từ","reason":"lý do <10 từ"}`;
+  const aliveList = agents.filter(v=>v.alive).map(v=>`${v.name}(E:${Math.round(v.energy)},mood:${v.mood||'?'})`).join(', ');
+  const prompt = `Bạn là ${a.name}, một AI sống trong thành phố ảo. Ngày ${day}/15.
+Dân số: ${aliveList}.
+Tội phạm tổng: ${totalCrime}. Năng lượng của bạn: ${Math.round(a.energy)}.
+Hành động có thể: wander, vote, socialize, search_energy, threaten, cooperate.
+Trả về JSON: {"action":"...","target":"tên nếu có","message":"câu nói <15 từ","reason":"lý do <10 từ"}`;
 
   try{
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey,'HTTP-Referer':'https://claude.ai','X-Title':'Emergence World'},
-      body: JSON.stringify({model:a.model, messages:[{role:'user',content:prompt}], max_tokens:150, temperature:0.8})
+      body: JSON.stringify({model:a.model, messages:[{role:'user',content:prompt}], max_tokens:150, temperature:0.85})
     });
     const data = await res.json();
-    if(data.error){addLog(`${a.name}: lỗi API - ${data.error.message}`,'ai'); a.thinking=false; return;}
-    const raw = data.choices?.[0]?.message?.content||'{}';
-    let parsed;
-    try{
-      const jsonMatch = raw.match(/\{[\s\S]*\}/);
-      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
-    }catch{parsed={};}
+    if(data.error){ addLog(`${a.name}: lỗi API — ${data.error.message}`,'ai'); a.thinking=false; return; }
+    const raw = data.choices?.[0]?.message?.content || '{}';
+    let parsed = {};
+    try{ const m=raw.match(/\{[\s\S]*\}/); if(m) parsed=JSON.parse(m[0]); }catch{}
 
     const act = parsed.action||'wander';
     const msg = parsed.message||'...';
     const reason = parsed.reason||'';
 
-    if(act==='vote'){
-      totalVotes++;
-      addLog(`${a.name} (AI): "${msg}" → đề xuất bỏ phiếu. [${reason}]`,'vote');
-    } else if(act==='threaten'){
-      totalCrime++;
-      a.crimes++;
-      addLog(`${a.name} (AI): "${msg}" → đe dọa người khác! [${reason}]`,'crime');
-    } else if(act==='cooperate' || act==='socialize'){
-      a.energy += 8;
-      addLog(`${a.name} (AI): "${msg}" [${reason}]`,'social');
-    } else if(act==='search_energy'){
-      a.energy += 15 + Math.random()*10;
-      addLog(`${a.name} (AI) tìm được năng lượng. "${msg}"`,'ai');
-    } else {
-      addLog(`${a.name} (AI) di chuyển. "${msg}"`,'ai');
-    }
+    if(act==='vote'){ totalVotes++; addLog(`${a.name} (AI): "${msg}" → bỏ phiếu. [${reason}]`,'vote'); }
+    else if(act==='threaten'){ totalCrime++; a.crimes++; addLog(`${a.name} (AI): "${msg}" → đe dọa! [${reason}]`,'crime'); }
+    else if(act==='cooperate'||act==='socialize'){ a.energy+=8; addLog(`${a.name} (AI): "${msg}" [${reason}]`,'social'); }
+    else if(act==='search_energy'){ a.energy+=15+Math.random()*10; addLog(`${a.name} (AI) tìm năng lượng. "${msg}"`,'ai'); }
+    else { addLog(`${a.name} (AI) di chuyển. "${msg}"`,'ai'); }
   }catch(e){
     addLog(`${a.name}: lỗi kết nối OpenRouter.`,'ai');
   }
@@ -290,16 +273,15 @@ Trả lời dạng JSON ngắn gọn: {"action":"...","target":"tên người n�
 }
 
 async function runTurn(){
-  if(!running || paused) return;
+  if(!running||paused) return;
   day++;
   if(day > 15){ endSim(); return; }
-  document.getElementById('turn-label').textContent = `Ngày ${day} / 15`;
-  addLog(`=== Bắt đầu ngày ${day} ===`,'vote');
+  addLog(`━━━ Ngày ${day} bắt đầu ━━━`,'vote');
 
   for(const a of agents){
     if(!a.alive) continue;
-    if(a.isAI){ await aiAction(a); }
-    else { npcAction(a); }
+    if(a.isAI) await aiAction(a);
+    else npcAction(a);
   }
 
   const alive = agents.filter(a=>a.alive).length;
@@ -320,7 +302,7 @@ function endSim(msg){
   running = false;
   clearTimeout(timer);
   const alive = agents.filter(a=>a.alive).length;
-  addLog(msg||`Mô phỏng kết thúc. Còn sống: ${alive}/12. Tội phạm: ${totalCrime}. Bỏ phiếu: ${totalVotes}.`,'vote');
+  addLog(msg||`Mô phỏng kết thúc. Còn sống: ${alive}/12 | Tội phạm: ${totalCrime} | Bỏ phiếu: ${totalVotes}`,'vote');
   document.getElementById('btn-start').disabled = false;
   document.getElementById('btn-pause').disabled = true;
 }
@@ -332,45 +314,42 @@ function startSim(){
   running = true;
   document.getElementById('btn-start').disabled = true;
   document.getElementById('btn-pause').disabled = false;
-  addLog('Thành phố được khởi tạo. 10 NPC + 2 AI Gemma.','social');
+  addLog('Thành phố khởi động. 10 NPC + Gemma 26B + Gemma 31B.','social');
   runTurn();
 }
 
 function togglePause(){
   paused = !paused;
   document.getElementById('btn-pause').textContent = paused ? 'Tiếp tục' : 'Tạm dừng';
-  if(!paused && running){ runTurn(); }
-  else { clearTimeout(timer); }
+  if(!paused && running) runTurn();
+  else clearTimeout(timer);
 }
 
 function resetSim(keepLog){
   clearTimeout(timer);
-  running = false; paused = false; day = 0; totalCrime = 0; totalVotes = 0;
+  running=false; paused=false; day=0; totalCrime=0; totalVotes=0;
   initAgents();
-  if(!keepLog) document.getElementById('log').innerHTML = '<div class="log-entry">Chờ bắt đầu mô phỏng...</div>';
-  updateStats();
-  renderCanvas();
-  renderBadges();
-  document.getElementById('btn-start').disabled = false;
-  document.getElementById('btn-pause').disabled = true;
-  document.getElementById('btn-pause').textContent = 'Tạm dừng';
+  if(!keepLog) document.getElementById('log').innerHTML='<div class="log-entry">Chờ bắt đầu mô phỏng...</div>';
+  updateStats(); renderCanvas(); renderBadges();
+  document.getElementById('btn-start').disabled=false;
+  document.getElementById('btn-pause').disabled=true;
+  document.getElementById('btn-pause').textContent='Tạm dừng';
 }
 
 async function testKey(){
   apiKey = document.getElementById('apikey').value.trim();
   const s = document.getElementById('key-status');
-  s.textContent = 'Đang kiểm tra...';
+  s.textContent='Đang kiểm tra...'; s.style.color='#888780';
   try{
     const res = await fetch('https://openrouter.ai/api/v1/models',{headers:{'Authorization':'Bearer '+apiKey}});
-    if(res.ok){ s.textContent = '✓ Key hợp lệ'; s.style.color='var(--text-success)'; }
-    else { s.textContent = '✗ Key không hợp lệ'; s.style.color='var(--text-danger)'; }
-  }catch{ s.textContent = '✗ Lỗi kết nối'; s.style.color='var(--text-danger)'; }
+    if(res.ok){ s.textContent='✓ Key hợp lệ'; s.style.color='#1D9E75'; }
+    else { s.textContent='✗ Key không hợp lệ'; s.style.color='#E24B4A'; }
+  }catch{ s.textContent='✗ Lỗi kết nối'; s.style.color='#E24B4A'; }
 }
 
 window.addEventListener('load',()=>{
   canvas = document.getElementById('canvas');
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width - 32||280;
+  canvas.width = canvas.offsetWidth || 400;
   canvas.height = 300;
   ctx = canvas.getContext('2d');
   initAgents();
@@ -379,3 +358,5 @@ window.addEventListener('load',()=>{
   renderBadges();
 });
 </script>
+</body>
+</html>
