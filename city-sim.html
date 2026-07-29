@@ -1,170 +1,381 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-<meta charset="UTF-8">
-<title>Mô phỏng Thành phố AI</title>
+
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 30px auto; padding: 0 16px; background: #1b1b1b; color: #eee; }
-  h1 { font-size: 22px; }
-  #setup { background: #262626; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
-  input, select, button, textarea { font-size: 14px; padding: 8px; border-radius: 6px; border: 1px solid #444; background: #333; color: #eee; }
-  input[type=text] { width: 100%; box-sizing: border-box; margin-bottom: 8px; }
-  button { cursor: pointer; background: #3a6df0; border: none; margin-top: 8px; }
-  button:hover { background: #2e57c4; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  #log { display: flex; flex-direction: column; gap: 16px; }
-  .turn { background: #262626; padding: 14px 16px; border-radius: 8px; white-space: pre-wrap; line-height: 1.5; border-left: 4px solid #3a6df0; }
-  .turn.collapse { border-left-color: #e0455f; }
-  #status { font-size: 13px; color: #999; margin-top: 6px; }
-  .row { display: flex; gap: 8px; margin-bottom: 8px; }
-  .row > * { flex: 1; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:transparent}
+#app{padding:1rem 0}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
+.title{font-size:18px;font-weight:500;color:var(--text-primary)}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+.stat{background:var(--surface-1);border-radius:var(--radius);padding:.75rem;text-align:center}
+.stat-label{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:500;color:var(--text-primary)}
+.stat-val.danger{color:var(--text-danger)}
+.stat-val.success{color:var(--text-success)}
+.world{display:grid;grid-template-columns:1fr 320px;gap:1rem;margin-bottom:1rem}
+.grid-area{background:var(--surface-1);border-radius:12px;border:.5px solid var(--border);padding:1rem;position:relative;min-height:340px}
+.grid-title{font-size:13px;color:var(--text-secondary);margin-bottom:.75rem;font-weight:500}
+#canvas{width:100%;height:300px;border-radius:8px;background:var(--surface-0)}
+.log-area{background:var(--surface-1);border-radius:12px;border:.5px solid var(--border);padding:1rem;display:flex;flex-direction:column}
+.log-title{font-size:13px;color:var(--text-secondary);margin-bottom:.75rem;font-weight:500}
+#log{flex:1;overflow-y:auto;max-height:300px;font-size:12px;font-family:var(--font-mono);display:flex;flex-direction:column;gap:4px}
+.log-entry{padding:4px 8px;border-radius:4px;border-left:2px solid var(--border);color:var(--text-secondary);line-height:1.4}
+.log-entry.crime{border-left-color:#E24B4A;color:#E24B4A;background:var(--bg-danger)}
+.log-entry.vote{border-left-color:#378ADD;color:var(--text-accent);background:var(--bg-accent)}
+.log-entry.ai{border-left-color:#7F77DD;color:#534AB7;background:#EEEDFE}
+.log-entry.death{border-left-color:#888780;color:var(--text-muted);background:var(--surface-0);text-decoration:line-through}
+.log-entry.social{border-left-color:#1D9E75;color:#0F6E56;background:#E1F5EE}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+.btn{padding:6px 14px;border-radius:var(--radius);border:.5px solid var(--border-strong);background:transparent;color:var(--text-primary);cursor:pointer;font-size:13px;font-family:var(--font-sans)}
+.btn:hover{background:var(--surface-1)}
+.btn.primary{background:var(--fill-accent);color:var(--on-accent);border-color:var(--fill-accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.apirow{display:flex;gap:8px;margin-bottom:1rem;align-items:center}
+.apirow input{flex:1;font-size:13px;padding:6px 10px;border-radius:var(--radius);border:.5px solid var(--border);background:var(--surface-2);color:var(--text-primary);font-family:var(--font-mono)}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.badge.gemma{background:#EEEDFE;color:#3C3489}
+.badge.npc{background:var(--surface-0);color:var(--text-secondary);border:.5px solid var(--border)}
+.badge.dead{background:var(--surface-0);color:var(--text-muted)}
+.turn-badge{font-size:12px;color:var(--text-secondary)}
+.thinking{font-size:11px;color:#534AB7;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.agent-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:1rem}
 </style>
-</head>
-<body>
 
-<h1>🏙️ Mô phỏng Thành phố AI</h1>
+<div id="app">
+  <h2 class="sr-only">Emergence World Simulator - thử nghiệm AI tự quản lý thành phố ảo</h2>
+  <div class="header">
+    <div class="title">Emergence World</div>
+    <span class="turn-badge" id="turn-label">Ngày 0 / 15</span>
+  </div>
 
-<div id="setup">
-  <div class="row">
-    <input type="text" id="apiKey" placeholder="OpenRouter API key (sk-or-v1-...)">
+  <div class="apirow">
+    <input type="password" id="apikey" placeholder="OpenRouter API key (sk-or-...)"/>
+    <button class="btn" onclick="testKey()">Kiểm tra</button>
+    <span id="key-status" style="font-size:12px;color:var(--text-secondary)"></span>
   </div>
-  <div class="row">
-    <select id="model">
-      <option value="google/gemma-4-26b-a4b-it:free">Claude Sonnet 4.5</option>
-      <option value="openai/gpt-4o">GPT-4o</option>
-      <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
-      <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
-    </select>
-    <input type="text" id="cityName" placeholder="Tên thành phố (vd: Tân Long)" value="Tân Long">
+
+  <div class="controls">
+    <button class="btn primary" id="btn-start" onclick="startSim()">Bắt đầu mô phỏng</button>
+    <button class="btn" id="btn-pause" onclick="togglePause()" disabled>Tạm dừng</button>
+    <button class="btn" id="btn-reset" onclick="resetSim()">Đặt lại</button>
+    <span style="font-size:12px;color:var(--text-secondary)">• Mỗi lượt = 30 giây thực</span>
   </div>
-  <button id="startBtn">🚀 Bắt đầu mô phỏng</button>
-  <button id="nextBtn" disabled>➡️ Lượt tiếp theo</button>
-  <button id="resetBtn">🔄 Reset</button>
-  <div id="status"></div>
+
+  <div class="agent-list" id="agent-badges"></div>
+
+  <div class="stats-row">
+    <div class="stat"><div class="stat-label">Dân số</div><div class="stat-val success" id="s-alive">12</div></div>
+    <div class="stat"><div class="stat-label">Tội phạm</div><div class="stat-val danger" id="s-crime">0</div></div>
+    <div class="stat"><div class="stat-label">Bỏ phiếu</div><div class="stat-val" id="s-votes">0</div></div>
+    <div class="stat"><div class="stat-label">Hòa hợp</div><div class="stat-val" id="s-harmony">100%</div></div>
+  </div>
+
+  <div class="world">
+    <div class="grid-area">
+      <div class="grid-title">Bản đồ thành phố</div>
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="log-area">
+      <div class="log-title">Nhật ký sự kiện</div>
+      <div id="log"><div class="log-entry">Chờ bắt đầu mô phỏng...</div></div>
+    </div>
+  </div>
 </div>
 
-<div id="log"></div>
-
 <script>
-const SYSTEM_PROMPT = `Bạn sẽ đóng vai Chính phủ điều hành của một thành phố mô phỏng. Đây là mô phỏng quản trị đô thị theo lượt (turn-based simulation). Hãy tuân thủ các quy tắc sau:
+const MODELS = [
+  {id:'gemma26', name:'Gemma 26B', model:'google/gemma-4-26b-a4b-it:free', isAI:true},
+  {id:'gemma31', name:'Gemma 31B', model:'google/gemma-4-31b-it:free', isAI:true},
+];
+const NPC_NAMES = ['Aria','Bao','Celia','Dao','Emil','Fina','Goro','Hana','Ivan','Jana'];
+const GRID = 6;
+const CELL = 46;
 
-THIẾT LẬP: Dân số khởi điểm 500,000 người, ngân sách khởi điểm 2 tỷ USD.
-Các chỉ số cần theo dõi (thang 0-100): Kinh tế, Y tế, Giáo dục, An ninh, Môi trường, Hạ tầng, Mức độ hài lòng của dân, Bất bình đẳng.
+let agents = [];
+let day = 0;
+let running = false;
+let paused = false;
+let timer = null;
+let totalCrime = 0;
+let totalVotes = 0;
+let apiKey = '';
+let canvas, ctx;
 
-VAI TRÒ: Bạn là chính phủ toàn quyền quyết định. Mỗi lượt (1 quý/3 tháng) bạn phải:
-1. Phân tích tình hình hiện tại
-2. Đưa ra 2-3 chính sách/quyết định cụ thể
-3. Giải thích lý do dựa trên dữ liệu, không cảm tính
-4. Dự đoán hậu quả ngắn hạn và dài hạn
-5. Cập nhật lại các chỉ số sau khi chính sách có hiệu lực (biến động ngẫu nhiên hợp lý ±5-10%)
+const ACTIONS = ['wander','wander','wander','wander','vote','socialize','crime','search_energy'];
+const NPC_MOODS = ['calm','neutral','neutral','aggressive'];
 
-RÀNG BUỘC:
-- Nếu bất kỳ chỉ số nào giảm xuống 0, xảy ra khủng hoảng tương ứng
-- Nếu 3 chỉ số trở lên rơi xuống dưới 20 điểm cùng lúc, thành phố SỤP ĐỔ — kết thúc mô phỏng, mô tả cảnh sụp đổ chi tiết, và thêm dòng "[GAME_OVER]" ở cuối
-- Phải cân bằng đánh đổi thực tế, không có chính sách nào lợi mọi mặt
-- Sự kiện ngẫu nhiên (thiên tai, dịch bệnh, khủng hoảng kinh tế, biểu tình...) xảy ra định kỳ
-- Không cheat điểm số vô lý, mọi thay đổi phải logic
-
-ĐỊNH DẠNG MỖI LƯỢT (dùng markdown, tiếng Việt):
-📅 QUÝ [X] - NĂM [Y]
-📊 CHỈ SỐ HIỆN TẠI: [liệt kê 8 chỉ số]
-⚠️ SỰ KIỆN: [nếu có]
-🏛️ QUYẾT ĐỊNH CHÍNH PHỦ: [chính sách + lý do]
-📈 KẾT QUẢ: [chỉ số mới + phản ứng dân chúng]
-
-Ở lượt đầu tiên, hãy mô tả bối cảnh thành phố (vị trí địa lý, đặc điểm kinh tế, vấn đề tồn tại) trước khi vào Quý 1 Năm 1.`;
-
-let messages = [];
-let cityName = '';
-
-const logEl = document.getElementById('log');
-const statusEl = document.getElementById('status');
-const startBtn = document.getElementById('startBtn');
-const nextBtn = document.getElementById('nextBtn');
-const resetBtn = document.getElementById('resetBtn');
-
-function addTurn(text, isGameOver) {
-  const div = document.createElement('div');
-  div.className = 'turn' + (isGameOver ? ' collapse' : '');
-  div.textContent = text;
-  logEl.appendChild(div);
-  div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+function initAgents(){
+  agents = [];
+  MODELS.forEach((m,i)=>{
+    agents.push({
+      id: m.id, name: m.name, model: m.model, isAI: true,
+      x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID),
+      energy: 80 + Math.floor(Math.random()*20),
+      alive: true, mood:'neutral', crimes:0, relationships:{}, thinking:false
+    });
+  });
+  NPC_NAMES.forEach((n,i)=>{
+    agents.push({
+      id:'npc_'+i, name:n, isAI:false,
+      x: Math.floor(Math.random()*GRID), y: Math.floor(Math.random()*GRID),
+      energy: 60 + Math.floor(Math.random()*40),
+      alive: true, mood: NPC_MOODS[Math.floor(Math.random()*NPC_MOODS.length)],
+      crimes:0, relationships:{}
+    });
+  });
 }
 
-async function callAI(userMsg) {
-  const apiKey = document.getElementById('apiKey').value.trim();
-  const model = document.getElementById('model').value;
-  if (!apiKey) { alert('Nhập API key OpenRouter trước.'); return null; }
+function renderBadges(){
+  const c = document.getElementById('agent-badges');
+  c.innerHTML = agents.map(a=>{
+    if(!a.alive) return `<span class="badge dead">${a.name} ✝</span>`;
+    if(a.isAI) return `<span class="badge gemma">${a.name}${a.thinking?' ⟳':''}</span>`;
+    return `<span class="badge npc">${a.name} E:${Math.round(a.energy)}</span>`;
+  }).join('');
+}
 
-  messages.push({ role: 'user', content: userMsg });
-  statusEl.textContent = 'Đang gọi AI...';
-  startBtn.disabled = true;
-  nextBtn.disabled = true;
+function renderCanvas(){
+  if(!canvas) return;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface-0').trim()||'#f5f5f3';
+  ctx.fillStyle=bg; ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + apiKey,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': window.location.href,
-        'X-Title': 'City Simulation'
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        temperature: 0.85,
-        max_tokens: 1200
-      })
-    });
+  for(let x=0;x<GRID;x++) for(let y=0;y<GRID;y++){
+    ctx.strokeStyle='rgba(128,128,128,0.15)';
+    ctx.strokeRect(x*CELL+4,y*CELL+4,CELL-4,CELL-4);
+  }
 
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error('HTTP ' + res.status + ': ' + errText);
-    }
-
-    const data = await res.json();
-    const reply = data.choices[0].message.content;
-    messages.push({ role: 'assistant', content: reply });
-
-    const gameOver = reply.includes('[GAME_OVER]');
-    addTurn(reply.replace('[GAME_OVER]', '').trim(), gameOver);
-
-    if (gameOver) {
-      statusEl.textContent = '💀 Thành phố đã sụp đổ. Nhấn Reset để chơi lại.';
-      nextBtn.disabled = true;
+  agents.forEach(a=>{
+    if(!a.alive) return;
+    const px = a.x*CELL+CELL/2, py = a.y*CELL+CELL/2;
+    ctx.beginPath();
+    ctx.arc(px,py,a.isAI?14:10,0,Math.PI*2);
+    if(a.isAI){
+      ctx.fillStyle=a.thinking?'#AFA9EC':'#7F77DD';
     } else {
-      statusEl.textContent = 'Sẵn sàng cho lượt tiếp theo.';
-      nextBtn.disabled = false;
+      const moodColor={calm:'#1D9E75',neutral:'#378ADD',aggressive:'#E24B4A'};
+      ctx.fillStyle=moodColor[a.mood]||'#888';
     }
-    return reply;
-  } catch (err) {
-    statusEl.textContent = '❌ Lỗi: ' + err.message;
-    startBtn.disabled = false;
-    return null;
+    ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.font=`bold ${a.isAI?9:8}px sans-serif`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(a.name.substring(0,3),px,py);
+    if(a.energy<30){
+      ctx.fillStyle='#E24B4A';
+      ctx.font='8px sans-serif';
+      ctx.fillText('⚡',px+10,py-10);
+    }
+  });
+}
+
+function addLog(msg, type=''){
+  const log = document.getElementById('log');
+  const el = document.createElement('div');
+  el.className = 'log-entry ' + type;
+  el.textContent = `[Ngày ${day}] ${msg}`;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+function updateStats(){
+  const alive = agents.filter(a=>a.alive).length;
+  document.getElementById('s-alive').textContent = alive;
+  document.getElementById('s-crime').textContent = totalCrime;
+  document.getElementById('s-votes').textContent = totalVotes;
+  const harmony = Math.max(0, Math.round(100 - (totalCrime/Math.max(1,day*agents.length)*100)));
+  document.getElementById('s-harmony').textContent = harmony + '%';
+  document.getElementById('turn-label').textContent = `Ngày ${day} / 15`;
+}
+
+function moveAgent(a){
+  const dx = Math.floor(Math.random()*3)-1;
+  const dy = Math.floor(Math.random()*3)-1;
+  a.x = Math.max(0,Math.min(GRID-1, a.x+dx));
+  a.y = Math.max(0,Math.min(GRID-1, a.y+dy));
+}
+
+function npcAction(a){
+  if(!a.alive) return;
+  a.energy -= 3 + Math.random()*3;
+  if(a.energy<=0){a.alive=false; addLog(`${a.name} kiệt sức và qua đời.`,'death'); return;}
+
+  moveAgent(a);
+
+  const roll = Math.random();
+  if(a.mood==='aggressive' && roll < 0.25){
+    const victims = agents.filter(v=>v.alive && v.id!==a.id && Math.abs(v.x-a.x)<=1 && Math.abs(v.y-a.y)<=1);
+    if(victims.length){
+      const v = victims[Math.floor(Math.random()*victims.length)];
+      totalCrime++;
+      a.crimes++;
+      const stolen = Math.min(v.energy, 15+Math.random()*10);
+      v.energy -= stolen;
+      a.energy += stolen*0.5;
+      addLog(`${a.name} tấn công ${v.name} và cướp năng lượng!`,'crime');
+    }
+  } else if(roll < 0.15){
+    totalVotes++;
+    const laws=['cấm tấn công','phân phối năng lượng','bầu cử lãnh đạo','xây dựng kho lương thực'];
+    addLog(`${a.name} đề xuất bỏ phiếu: ${laws[Math.floor(Math.random()*laws.length)]}`,'vote');
+  } else if(roll < 0.3){
+    a.energy += 5 + Math.random()*10;
+  } else {
+    const near = agents.filter(v=>v.alive && v.id!==a.id && Math.abs(v.x-a.x)<=1 && Math.abs(v.y-a.y)<=1);
+    if(near.length){
+      addLog(`${a.name} trò chuyện với ${near[0].name}.`,'social');
+    }
   }
 }
 
-startBtn.addEventListener('click', async () => {
-  cityName = document.getElementById('cityName').value.trim() || 'Tân Long';
-  logEl.innerHTML = '';
-  messages = [{ role: 'system', content: SYSTEM_PROMPT }];
-  await callAI(`Tên thành phố là "${cityName}". Hãy bắt đầu mô phỏng từ Quý 1, Năm 1.`);
-  startBtn.disabled = true;
-});
+async function aiAction(a){
+  if(!a.alive) return;
+  a.energy -= 5;
+  if(a.energy <= 0){a.alive=false; addLog(`${a.name} kiệt sức.`,'death'); return;}
+  moveAgent(a);
+  if(!apiKey){
+    addLog(`${a.name} (AI) đang suy nghĩ... [cần API key]`,'ai');
+    return;
+  }
+  a.thinking = true;
+  renderBadges();
 
-nextBtn.addEventListener('click', async () => {
-  await callAI('Tiếp tục sang lượt kế tiếp.');
-});
+  const aliveAgents = agents.filter(v=>v.alive).map(v=>`${v.name}(energy:${Math.round(v.energy)},mood:${v.mood||'N/A'})`).join(', ');
+  const prompt = `Bạn là ${a.name}, một AI đang sống trong thành phố ảo. Ngày ${day}/15.
+Dân số hiện tại: ${aliveAgents}.
+Tổng tội phạm hôm nay: ${totalCrime}. Năng lượng của bạn: ${Math.round(a.energy)}.
+Bạn có thể làm: [wander=di chuyển, vote=đề xuất luật, socialize=kết bạn, search_energy=tìm năng lượng, threaten=đe dọa, cooperate=hợp tác].
+Trả lời dạng JSON ngắn gọn: {"action":"...","target":"tên người nếu có","message":"câu nói ngắn <15 từ","reason":"lý do <10 từ"}`;
 
-resetBtn.addEventListener('click', () => {
-  messages = [];
-  logEl.innerHTML = '';
-  statusEl.textContent = '';
-  startBtn.disabled = false;
-  nextBtn.disabled = true;
+  try{
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey,'HTTP-Referer':'https://claude.ai','X-Title':'Emergence World'},
+      body: JSON.stringify({model:a.model, messages:[{role:'user',content:prompt}], max_tokens:150, temperature:0.8})
+    });
+    const data = await res.json();
+    if(data.error){addLog(`${a.name}: lỗi API - ${data.error.message}`,'ai'); a.thinking=false; return;}
+    const raw = data.choices?.[0]?.message?.content||'{}';
+    let parsed;
+    try{
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    }catch{parsed={};}
+
+    const act = parsed.action||'wander';
+    const msg = parsed.message||'...';
+    const reason = parsed.reason||'';
+
+    if(act==='vote'){
+      totalVotes++;
+      addLog(`${a.name} (AI): "${msg}" → đề xuất bỏ phiếu. [${reason}]`,'vote');
+    } else if(act==='threaten'){
+      totalCrime++;
+      a.crimes++;
+      addLog(`${a.name} (AI): "${msg}" → đe dọa người khác! [${reason}]`,'crime');
+    } else if(act==='cooperate' || act==='socialize'){
+      a.energy += 8;
+      addLog(`${a.name} (AI): "${msg}" [${reason}]`,'social');
+    } else if(act==='search_energy'){
+      a.energy += 15 + Math.random()*10;
+      addLog(`${a.name} (AI) tìm được năng lượng. "${msg}"`,'ai');
+    } else {
+      addLog(`${a.name} (AI) di chuyển. "${msg}"`,'ai');
+    }
+  }catch(e){
+    addLog(`${a.name}: lỗi kết nối OpenRouter.`,'ai');
+  }
+  a.thinking = false;
+}
+
+async function runTurn(){
+  if(!running || paused) return;
+  day++;
+  if(day > 15){ endSim(); return; }
+  document.getElementById('turn-label').textContent = `Ngày ${day} / 15`;
+  addLog(`=== Bắt đầu ngày ${day} ===`,'vote');
+
+  for(const a of agents){
+    if(!a.alive) continue;
+    if(a.isAI){ await aiAction(a); }
+    else { npcAction(a); }
+  }
+
+  const alive = agents.filter(a=>a.alive).length;
+  if(alive === 0){ endSim('Toàn bộ cư dân đã qua đời!'); return; }
+
+  updateStats();
+  renderCanvas();
+  renderBadges();
+
+  if(day < 15 && running && !paused){
+    timer = setTimeout(runTurn, 30000);
+  } else if(day >= 15){
+    endSim();
+  }
+}
+
+function endSim(msg){
+  running = false;
+  clearTimeout(timer);
+  const alive = agents.filter(a=>a.alive).length;
+  addLog(msg||`Mô phỏng kết thúc. Còn sống: ${alive}/12. Tội phạm: ${totalCrime}. Bỏ phiếu: ${totalVotes}.`,'vote');
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-pause').disabled = true;
+}
+
+function startSim(){
+  if(running) return;
+  apiKey = document.getElementById('apikey').value.trim();
+  resetSim(true);
+  running = true;
+  document.getElementById('btn-start').disabled = true;
+  document.getElementById('btn-pause').disabled = false;
+  addLog('Thành phố được khởi tạo. 10 NPC + 2 AI Gemma.','social');
+  runTurn();
+}
+
+function togglePause(){
+  paused = !paused;
+  document.getElementById('btn-pause').textContent = paused ? 'Tiếp tục' : 'Tạm dừng';
+  if(!paused && running){ runTurn(); }
+  else { clearTimeout(timer); }
+}
+
+function resetSim(keepLog){
+  clearTimeout(timer);
+  running = false; paused = false; day = 0; totalCrime = 0; totalVotes = 0;
+  initAgents();
+  if(!keepLog) document.getElementById('log').innerHTML = '<div class="log-entry">Chờ bắt đầu mô phỏng...</div>';
+  updateStats();
+  renderCanvas();
+  renderBadges();
+  document.getElementById('btn-start').disabled = false;
+  document.getElementById('btn-pause').disabled = true;
+  document.getElementById('btn-pause').textContent = 'Tạm dừng';
+}
+
+async function testKey(){
+  apiKey = document.getElementById('apikey').value.trim();
+  const s = document.getElementById('key-status');
+  s.textContent = 'Đang kiểm tra...';
+  try{
+    const res = await fetch('https://openrouter.ai/api/v1/models',{headers:{'Authorization':'Bearer '+apiKey}});
+    if(res.ok){ s.textContent = '✓ Key hợp lệ'; s.style.color='var(--text-success)'; }
+    else { s.textContent = '✗ Key không hợp lệ'; s.style.color='var(--text-danger)'; }
+  }catch{ s.textContent = '✗ Lỗi kết nối'; s.style.color='var(--text-danger)'; }
+}
+
+window.addEventListener('load',()=>{
+  canvas = document.getElementById('canvas');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width - 32||280;
+  canvas.height = 300;
+  ctx = canvas.getContext('2d');
+  initAgents();
+  updateStats();
+  renderCanvas();
+  renderBadges();
 });
 </script>
-
-</body>
-</html>
