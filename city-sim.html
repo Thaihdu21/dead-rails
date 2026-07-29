@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Life Simulator: Generations</title>
+    <title>AI Life Simulator: Fast Generations</title>
     <style>
         :root {
             --bg-base: #0f172a;
@@ -73,10 +73,12 @@
 
         /* Timeline / Memory */
         .timeline { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; }
-        .event-card { background: var(--bg-card); padding: 12px; border-radius: 8px; font-size: 0.9rem; border-left: 4px solid var(--accent-blue); }
+        .event-card { background: var(--bg-card); padding: 12px; border-radius: 8px; font-size: 0.9rem; border-left: 4px solid var(--accent-blue); animation: fadeIn 0.3s ease; }
         .event-card.thought { border-left-color: var(--accent-purple); font-style: italic; }
         .event-card.critical { border-left-color: var(--accent-red); background: rgba(239, 68, 68, 0.1); }
         .event-time { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Right Panel: Actions & Charts */
         .chart-container { background: var(--bg-card); padding: 10px; border-radius: 8px; height: 150px; display: flex; flex-direction: column; }
@@ -96,22 +98,19 @@
 </head>
 <body>
 
-    <!-- Setup Modal -->
     <div id="setup-modal">
         <div class="setup-card">
             <h2>AI Life Simulator</h2>
-            <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">An endless generational simulation driven by OpenRouter (gemma-4-31b-it:free).</p>
+            <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">Fast Mode: 1 Year = ~10 seconds.<br>Generational simulation driven by OpenRouter.</p>
             <input type="password" id="api-key-input" placeholder="Enter OpenRouter API Key...">
             <button class="btn" id="start-btn">Start Simulation</button>
             <p id="save-found-msg" style="margin-top: 15px; font-size: 0.8rem; color: var(--accent-green); display: none;">Found existing save. Will continue simulation.</p>
         </div>
     </div>
 
-    <!-- Header -->
     <header>
         <div class="world-clock">
             <div>Date: <span id="ui-date">Jan 1, 2024</span></div>
-            <div>Time: <span id="ui-time">08:00</span></div>
             <div>Weather: <span id="ui-weather">Sunny</span></div>
         </div>
         <div class="api-status">
@@ -120,7 +119,6 @@
         </div>
     </header>
 
-    <!-- Main Application -->
     <main>
         <!-- Left Panel: Profile -->
         <div class="panel">
@@ -155,9 +153,7 @@
             </div>
 
             <h4 style="margin-top: 15px;">Relationships</h4>
-            <div class="relationship-list" id="ui-relationships">
-                <!-- Populated via JS -->
-            </div>
+            <div class="relationship-list" id="ui-relationships"></div>
         </div>
 
         <!-- Center Panel: Finances, State, & Timeline -->
@@ -182,9 +178,7 @@
             </div>
 
             <h4 style="margin-top: 10px;">Life Timeline & Thoughts</h4>
-            <div class="timeline" id="ui-timeline">
-                <!-- Events populated via JS -->
-            </div>
+            <div class="timeline" id="ui-timeline"></div>
         </div>
 
         <!-- Right Panel: Data, Economy & Manual Override -->
@@ -204,7 +198,7 @@
             </div>
 
             <h4 style="margin-top: 15px;">AI Focus & States</h4>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 10px;">The AI decides its macro state naturally. Highlighting shows current focus.</p>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 10px;">The AI decides its macro state naturally.</p>
             <div class="actions-grid">
                 <button class="action-btn" id="btn-study">Study</button>
                 <button class="action-btn" id="btn-work">Work</button>
@@ -214,7 +208,6 @@
                 <button class="action-btn" id="btn-health">Health/Gym</button>
             </div>
             
-            <!-- Global manual actions to force events (For the user/god) -->
             <button class="btn" id="force-ai-btn" style="margin-top:15px; width:100%; background:var(--bg-card); color:var(--text-main);">Force AI Decision Now</button>
         </div>
     </main>
@@ -226,13 +219,14 @@
         const CONSTANTS = {
             API_URL: "https://openrouter.ai/api/v1/chat/completions",
             MODEL: "google/gemma-4-31b-it:free", 
-            TICK_RATE: 200, // 200ms real time = 1 in-game hour
-            HOURS_PER_DAY: 24,
+            TICK_RATE: 25, // 25ms = 1 Day. ~9 giây = 1 Năm.
             DAYS_PER_MONTH: 30,
             MONTHS_PER_YEAR: 12,
             MAX_AGE: 100,
             START_YEAR: 2024,
-            SAVE_KEY: "ai_life_sim_save_v1"
+            SAVE_KEY: "ai_life_sim_save_fast_v2",
+            // Các cột mốc tuổi tự động gọi AI quyết định để tiết kiệm API
+            AI_MILESTONES: [12, 15, 18, 22, 26, 30, 35, 40, 50, 60, 70, 80]
         };
 
         const Utils = {
@@ -249,25 +243,15 @@
         let state = {
             apiKey: "",
             generation: 1,
-            time: { year: CONSTANTS.START_YEAR, month: 1, day: 1, hour: 8, totalHours: 0 },
+            time: { year: CONSTANTS.START_YEAR, month: 1, day: 1 },
             world: { weather: "Sunny", inflation: 2.0, market: 100, marketTrend: "Bull" },
             person: {
-                id: Utils.uuid(),
-                name: "Alpha",
-                age: 1, // in years
-                lifeStage: "Toddler",
-                personality: "",
-                avatar: "👶",
+                id: Utils.uuid(), name: "Alpha", age: 1, lifeStage: "Toddler", personality: "", avatar: "👶",
                 stats: { health: 100, energy: 100, stress: 0, mood: 100 },
-                currentAction: "Sleeping",
-                macroFocus: "rest" // rest, study, work, invest, socialize, health
+                currentAction: "Playing", macroFocus: "rest"
             },
-            finances: {
-                money: 0, bank: 0, debt: 0, stocks: 0, income: 0, expenses: 10 // child expenses covered by parents implicitly until 18
-            },
-            career: {
-                title: "None", salary: 0, isEmployed: false, isStudent: false
-            },
+            finances: { money: 0, bank: 0, debt: 0, stocks: 0, income: 0, expenses: 10 },
+            career: { title: "None", salary: 0, isEmployed: false, isStudent: false },
             relationships: [],
             history: { netWorth: [], health: [] },
             memory: [],
@@ -285,12 +269,9 @@
         ];
 
         const PERSONALITY_TRAITS = [
-            "Introvert, Frugal, Conservative",
-            "Extrovert, Impulsive, Risk-Taker",
-            "Ambitious, Career-oriented, Stressed",
-            "Relaxed, Family-oriented, Optimistic",
-            "Creative, Disorganized, Generous",
-            "Analytical, Pessimistic, Patient"
+            "Introvert, Frugal, Conservative", "Extrovert, Impulsive, Risk-Taker",
+            "Ambitious, Career-oriented, Stressed", "Relaxed, Family-oriented, Optimistic",
+            "Creative, Disorganized, Generous", "Analytical, Pessimistic, Patient"
         ];
 
         /******************************************************************
@@ -300,22 +281,16 @@
         class StorageEngine {
             static save() {
                 if(!state.apiKey) return;
-                const saveData = JSON.stringify(state);
-                localStorage.setItem(CONSTANTS.SAVE_KEY, saveData);
+                localStorage.setItem(CONSTANTS.SAVE_KEY, JSON.stringify(state));
             }
             static load() {
                 const data = localStorage.getItem(CONSTANTS.SAVE_KEY);
                 if(data) {
-                    try {
-                        const parsed = JSON.parse(data);
-                        // Merge to handle updates to state structure in code
-                        state = { ...state, ...parsed }; 
-                        return true;
-                    } catch(e) { console.error("Save corrupted"); }
+                    try { state = { ...state, ...JSON.parse(data) }; return true; } 
+                    catch(e) {}
                 }
                 return false;
             }
-            static wipe() { localStorage.removeItem(CONSTANTS.SAVE_KEY); }
         }
 
         class UI {
@@ -327,25 +302,20 @@
             }
 
             static updateAll() {
-                // Header
                 const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
                 this.get('ui-date').innerText = `${m[state.time.month-1]} ${state.time.day}, ${state.time.year}`;
-                this.get('ui-time').innerText = `${String(state.time.hour).padStart(2, '0')}:00`;
                 this.get('ui-weather').innerText = state.world.weather;
                 this.get('ui-generation').innerText = state.generation;
                 
-                // AI Status
                 this.get('ai-status-text').innerText = state.flags.isThinking ? "Thinking..." : "Living";
                 this.get('ai-indicator').className = `indicator ${state.flags.isThinking ? 'active' : ''}`;
 
-                // Profile
                 this.get('ui-name').innerText = state.person.name;
                 this.get('ui-age').innerText = state.person.age;
                 this.get('ui-stage').innerText = state.person.lifeStage;
                 this.get('ui-avatar').innerText = state.person.avatar;
                 this.get('ui-personality').innerText = state.person.personality;
                 
-                // Vitals
                 const s = state.person.stats;
                 this.get('ui-val-health').innerText = Math.round(s.health) + "%";
                 this.get('bar-health').style.width = s.health + "%";
@@ -356,27 +326,21 @@
                 this.get('ui-val-mood').innerText = Math.round(s.mood) + "%";
                 this.get('bar-mood').style.width = s.mood + "%";
 
-                // Finances
                 this.get('ui-money').innerText = Utils.formatMoney(state.finances.money + state.finances.bank);
                 this.get('ui-debt').innerText = Utils.formatMoney(state.finances.debt);
                 this.get('ui-current-action').innerText = state.person.currentAction;
                 this.get('ui-career').innerText = state.career.isStudent ? "University Student" : (state.career.isEmployed ? state.career.title : "Unemployed");
 
-                // World
                 this.get('ui-inflation').innerText = state.world.inflation.toFixed(1) + "%";
                 this.get('ui-market').innerText = state.world.marketTrend;
 
-                // Buttons Highlights
                 document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('active'));
                 const btnMap = { "study": "btn-study", "work": "btn-work", "rest": "btn-rest", "invest": "btn-invest", "socialize": "btn-socialize", "health": "btn-health" };
-                if(btnMap[state.person.macroFocus]) {
-                    this.get(btnMap[state.person.macroFocus]).classList.add('active');
-                }
+                if(btnMap[state.person.macroFocus]) this.get(btnMap[state.person.macroFocus]).classList.add('active');
 
-                // Relationships
                 const relContainer = this.get('ui-relationships');
                 relContainer.innerHTML = '';
-                if(state.relationships.length === 0) relContainer.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem;">No close relationships yet.</span>';
+                if(state.relationships.length === 0) relContainer.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem;">No close relationships.</span>';
                 state.relationships.forEach(rel => {
                     relContainer.innerHTML += `
                         <div class="rel-item">
@@ -385,7 +349,8 @@
                         </div>`;
                 });
 
-                this.drawCharts();
+                // Tối ưu hoá không vẽ chart mỗi tick để giảm lag
+                if(state.time.day % 10 === 0) this.drawCharts();
             }
 
             static logEvent(text, type = "normal") {
@@ -396,14 +361,10 @@
                 div.innerHTML = `<div class="event-time">${timeStr}</div>${text}`;
                 container.prepend(div);
                 
-                // Keep memory trimmed in state
                 state.memory.unshift({ time: timeStr, text: text, type: type });
                 if(state.memory.length > 50) state.memory.pop();
                 
-                // Cleanup DOM
-                if(container.children.length > 30) {
-                    container.removeChild(container.lastChild);
-                }
+                if(container.children.length > 30) container.removeChild(container.lastChild);
             }
 
             static drawCharts() {
@@ -430,7 +391,6 @@
                     ctx.stroke();
                 };
 
-                // Resize canvas correctly
                 const nwC = this.get('chart-networth');
                 const hlC = this.get('chart-health');
                 nwC.width = nwC.parentElement.clientWidth - 20;
@@ -450,18 +410,18 @@
                 UI.updateAll();
 
                 const systemPrompt = `You are playing a Life Simulation game. You are roleplaying as ${state.person.name}, a ${state.person.age}-year-old ${state.person.lifeStage}.
-Your personality is: ${state.person.personality}.
-Current Stats: Health: ${Math.round(state.person.stats.health)}/100, Energy: ${Math.round(state.person.stats.energy)}/100, Stress: ${Math.round(state.person.stats.stress)}/100.
+Your personality: ${state.person.personality}.
+Stats: Health: ${Math.round(state.person.stats.health)}/100, Energy: ${Math.round(state.person.stats.energy)}/100, Stress: ${Math.round(state.person.stats.stress)}/100.
 Financial: Cash $${Math.round(state.finances.money)}, Bank $${Math.round(state.finances.bank)}, Debt $${Math.round(state.finances.debt)}.
 Employment: ${state.career.isEmployed ? state.career.title : "Unemployed"}.
 
-You must make a strategic life decision for the upcoming months.
+Make a strategic life decision for the upcoming years.
 Choose ONE macro_focus from: "study", "work", "rest", "invest", "socialize", "health".
-You may also trigger a major action if appropriate for your age/money (e.g., "apply_job", "quit_job", "university", "propose", "have_child", "buy_house", "none").
+Choose ONE major_action if appropriate (e.g., "apply_job", "quit_job", "university", "propose", "have_child", "buy_house", "none").
 
 Respond ONLY in pure JSON format:
 {
-    "thought": "Your internal monologue explaining why you are making this choice based on your stats/age.",
+    "thought": "Internal monologue explaining choice based on your stats/age.",
     "macro_focus": "chosen_focus",
     "major_action": "chosen_action"
 }`;
@@ -469,25 +429,19 @@ Respond ONLY in pure JSON format:
                 try {
                     const response = await fetch(CONSTANTS.API_URL, {
                         method: "POST",
-                        headers: {
-                            "Authorization": `Bearer ${state.apiKey}`,
-                            "Content-Type": "application/json"
-                        },
+                        headers: { "Authorization": `Bearer ${state.apiKey}`, "Content-Type": "application/json" },
                         body: JSON.stringify({
                             model: CONSTANTS.MODEL,
                             messages: [
                                 { role: "system", content: systemPrompt },
-                                { role: "user", content: `Recent events: ${contextPrompt}\nMake your choice.` }
+                                { role: "user", content: `Context: ${contextPrompt}\nMake your choice.` }
                             ],
                             temperature: 0.7
                         })
                     });
 
                     const data = await response.json();
-                    let content = data.choices[0].message.content;
-                    
-                    // Cleanup markdown formatting if any
-                    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+                    let content = data.choices[0].message.content.replace(/```json/g, '').replace(/```/g, '').trim();
                     const parsed = JSON.parse(content);
                     
                     state.flags.isThinking = false;
@@ -503,46 +457,34 @@ Respond ONLY in pure JSON format:
             static processDecision(decision) {
                 if(!decision) return;
                 
-                // Log thought
                 if(decision.thought) UI.logEvent(`"${decision.thought}"`, "thought");
-
-                // Update focus
                 if(decision.macro_focus && ["study", "work", "rest", "invest", "socialize", "health"].includes(decision.macro_focus)) {
                     state.person.macroFocus = decision.macro_focus;
                 }
 
-                // Handle major actions
                 const action = decision.major_action;
                 if(action === "apply_job" && state.person.age >= 16 && !state.career.isEmployed) {
                     const job = CAREERS[Utils.randomInt(0, Math.min(CAREERS.length-1, Math.floor(state.person.age/10)))];
                     state.career.isEmployed = true;
-                    state.career.title = job.title;
-                    state.career.salary = job.salary;
-                    state.career.isStudent = false;
+                    state.career.title = job.title; state.career.salary = job.salary; state.career.isStudent = false;
                     UI.logEvent(`Got a new job as a ${job.title}!`);
                 } else if(action === "quit_job" && state.career.isEmployed) {
-                    state.career.isEmployed = false;
-                    state.career.title = "None";
-                    state.career.salary = 0;
+                    state.career.isEmployed = false; state.career.title = "None"; state.career.salary = 0;
                     UI.logEvent("Quit my job.");
                 } else if(action === "university" && state.person.age >= 18 && !state.career.isStudent) {
                     if(state.finances.money + state.finances.bank > 10000) {
-                        state.finances.money -= 10000;
-                        state.career.isStudent = true;
+                        state.finances.money -= 10000; state.career.isStudent = true;
                         UI.logEvent("Enrolled in University paid with cash.");
                     } else {
-                        state.finances.debt += 15000;
-                        state.career.isStudent = true;
+                        state.finances.debt += 15000; state.career.isStudent = true;
                         UI.logEvent("Took out a student loan to attend University.");
                     }
                 } else if(action === "propose" && state.person.age >= 18 && !state.flags.hasPartner) {
-                    if(state.relationships.length > 0) {
-                        state.flags.hasPartner = true;
-                        UI.logEvent("Proposed and got married! 🎉", "critical");
-                    }
-                } else if(action === "have_child" && state.flags.hasPartner && state.person.age > 20) {
-                    state.flags.hasKids++;
-                    state.finances.expenses += 500;
+                    state.flags.hasPartner = true;
+                    UI.logEvent("Got married! 🎉", "critical");
+                    state.relationships.push({ name: `Partner ${Utils.uuid().substring(0,4)}`, type: "Spouse", trust: 100 });
+                } else if(action === "have_child" && state.flags.hasPartner) {
+                    state.flags.hasKids++; state.finances.expenses += 500;
                     UI.logEvent(`Had a child! (Total kids: ${state.flags.hasKids}) 👶`, "critical");
                     state.relationships.push({ name: `Child ${state.flags.hasKids}`, type: "Child", trust: 100 });
                 }
@@ -555,217 +497,155 @@ Respond ONLY in pure JSON format:
                 this.interval = setInterval(() => this.tick(), CONSTANTS.TICK_RATE);
                 UI.logEvent("Simulation started.");
             }
-
-            static stop() {
-                clearInterval(this.interval);
-            }
+            static stop() { clearInterval(this.interval); }
 
             static async tick() {
-                if(state.flags.isThinking) return; // Pause time while AI thinks
+                if(state.flags.isThinking) return; 
 
-                // Advance Time
-                state.time.hour++;
-                state.time.totalHours++;
-
-                if(state.time.hour >= 24) {
-                    state.time.hour = 0;
-                    state.time.day++;
-                    this.dailyUpdate();
-                }
+                // Advance 1 Day per Tick
+                state.time.day++;
+                this.dailyUpdate();
 
                 if(state.time.day > CONSTANTS.DAYS_PER_MONTH) {
                     state.time.day = 1;
                     state.time.month++;
-                    await this.monthlyUpdate();
+                    this.monthlyUpdate();
                 }
 
                 if(state.time.month > CONSTANTS.MONTHS_PER_YEAR) {
                     state.time.month = 1;
                     state.time.year++;
-                    this.yearlyUpdate();
+                    await this.yearlyUpdate();
                 }
 
-                // Update UI Clock frequently
-                UI.updateAll();
+                // Update UI visually
+                if(state.time.day % 2 === 0) UI.updateAll(); 
             }
 
             static dailyUpdate() {
                 const p = state.person;
                 const s = p.stats;
                 
-                // Routine based on Macro Focus & Age
-                if(state.time.hour >= 22 || state.time.hour <= 6) {
-                    p.currentAction = "Sleeping";
-                    s.energy = Utils.clamp(s.energy + 30, 0, 100);
-                    s.stress = Utils.clamp(s.stress - 2, 0, 100);
+                // Fast Daily Math (net changes per day including sleep)
+                if(p.age < 4) {
+                    p.currentAction = "Playing / Growing";
+                    s.health += 0.1;
+                } else if(p.age >= 4 && p.age < 18) {
+                    p.currentAction = "At School";
+                    s.stress += 0.5;
                 } else {
-                    if(p.age < 4) {
-                        p.currentAction = "Playing / Crying";
-                        s.energy -= 1;
-                    } else if(p.age >= 4 && p.age < 18) {
-                        if(state.time.hour >= 8 && state.time.hour <= 15) {
-                            p.currentAction = "At School";
-                            s.energy -= 2; s.stress += 1;
-                        } else {
-                            p.currentAction = "Doing Homework / Playing";
-                            s.energy -= 1;
-                        }
-                    } else {
-                        // Adult Routine
-                        switch(p.macroFocus) {
-                            case "work":
-                                if(state.career.isEmployed) {
-                                    p.currentAction = "Working";
-                                    s.energy -= 4; s.stress += 3;
-                                } else {
-                                    p.currentAction = "Job Hunting";
-                                    s.energy -= 2; s.stress += 2;
-                                }
-                                break;
-                            case "study":
-                                p.currentAction = state.career.isStudent ? "University Classes" : "Self-studying";
-                                s.energy -= 3; s.stress += 2;
-                                break;
-                            case "rest":
-                                p.currentAction = "Resting";
-                                s.energy += 5; s.stress -= 5;
-                                break;
-                            case "health":
-                                p.currentAction = "Exercising";
-                                s.energy -= 4; s.health += 0.5; s.stress -= 3;
-                                break;
-                            case "socialize":
-                                p.currentAction = "Hanging out";
-                                s.energy -= 2; s.mood += 5;
-                                break;
-                            case "invest":
-                                p.currentAction = "Researching Stocks";
-                                s.energy -= 2; s.stress += 1;
-                                break;
-                        }
+                    switch(p.macroFocus) {
+                        case "work":
+                            p.currentAction = state.career.isEmployed ? "Working Hard" : "Job Hunting";
+                            s.stress += 1.5; s.mood -= 0.5;
+                            break;
+                        case "study":
+                            p.currentAction = state.career.isStudent ? "University Classes" : "Self-studying";
+                            s.stress += 1.0;
+                            break;
+                        case "rest":
+                            p.currentAction = "Resting / Chilling";
+                            s.stress -= 2.0; s.mood += 1.0; s.health += 0.1;
+                            break;
+                        case "health":
+                            p.currentAction = "Focusing on Fitness";
+                            s.health += 0.3; s.stress -= 1.0;
+                            break;
+                        case "socialize":
+                            p.currentAction = "Hanging out";
+                            s.mood += 2.0; s.stress -= 0.5;
+                            break;
+                        case "invest":
+                            p.currentAction = "Analyzing Markets";
+                            s.stress += 0.5;
+                            break;
                     }
                 }
 
-                // Health checks
-                if(s.stress > 80) s.health -= 0.5;
-                if(s.energy < 10) { s.health -= 1; s.stress += 2; }
-                if(s.stress < 20 && s.energy > 50) s.health += 0.2;
-
+                // Balance stats
+                if(s.stress > 80) s.health -= 0.2;
+                if(s.stress < 20) s.health += 0.1;
+                
                 s.health = Utils.clamp(s.health, 0, 100);
-                s.energy = Utils.clamp(s.energy, 0, 100);
+                s.energy = 100; // Energy is abstracted in fast mode since sleep is instant
                 s.stress = Utils.clamp(s.stress, 0, 100);
                 s.mood = Utils.clamp(s.mood, 0, 100);
 
-                // Death check
-                if(s.health <= 0) {
-                    this.handleDeath();
-                } else if (s.health < 20 && Math.random() < 0.01) {
-                    UI.logEvent("Suffered a severe medical emergency!", "critical");
-                    s.health -= 10;
-                    state.finances.debt += 5000; // Medical debt
-                }
+                if(s.health <= 0) this.handleDeath();
             }
 
-            static async monthlyUpdate() {
-                // Economy Engine
+            static monthlyUpdate() {
                 const f = state.finances;
                 
-                // Income
-                if(state.career.isEmployed) {
-                    f.money += state.career.salary;
-                }
-                
-                // Expenses
-                let livingCost = 0;
-                if(state.person.age >= 18) livingCost = 1500; // Basic rent/food
+                // Income & Expenses
+                if(state.career.isEmployed) f.money += state.career.salary;
+                let livingCost = state.person.age >= 18 ? 1500 : 0;
                 f.money -= (livingCost + f.expenses);
 
-                // Debt Interest
+                // Debt
                 if(f.debt > 0) {
-                    f.debt *= 1.05; // 5% monthly interest
-                    if(f.money > 0) { // Auto repay
+                    f.debt *= 1.05;
+                    if(f.money > 0) { 
                         const repay = Math.min(f.money, f.debt * 0.1);
-                        f.money -= repay;
-                        f.debt -= repay;
+                        f.money -= repay; f.debt -= repay;
                     }
                 } else if(f.money < 0) {
-                    f.debt += Math.abs(f.money);
-                    f.money = 0;
+                    f.debt += Math.abs(f.money); f.money = 0;
                 }
 
-                // Bank Interest
-                f.bank *= 1.002; // Tiny bank interest
+                f.bank *= 1.002;
                 
                 // Stocks
-                if(state.world.marketTrend === "Bull") {
-                    f.stocks *= Utils.randomRange(1.0, 1.05);
-                } else {
-                    f.stocks *= Utils.randomRange(0.9, 1.02);
-                }
+                f.stocks *= (state.world.marketTrend === "Bull") ? Utils.randomRange(1.0, 1.05) : Utils.randomRange(0.9, 1.02);
+                if(state.person.macroFocus === "invest" && f.money > 500) { f.money -= 500; f.stocks += 500; }
 
-                if(state.person.macroFocus === "invest" && f.money > 500) {
-                    f.money -= 500;
-                    f.stocks += 500;
-                }
-
-                // Random Events (5% chance monthly)
-                if(Math.random() < 0.05) this.generateRandomEvent();
-
-                // Save state
-                StorageEngine.save();
-
-                // AI Decision Trigger (Every 3 months or random)
-                if(state.time.month % 3 === 0 && state.person.age >= 10) {
-                    const decision = await AI.requestDecision("It's a new season. Consider your age, career, finances, and relationships.");
-                    AI.processDecision(decision);
-                }
+                if(Math.random() < 0.02) this.generateRandomEvent();
             }
 
-            static yearlyUpdate() {
+            static async yearlyUpdate() {
                 state.person.age++;
                 
-                // Aging affects
-                if(state.person.age > 40) {
-                    state.person.stats.health -= (state.person.age - 40) * 0.1; 
-                }
+                if(state.person.age > 40) state.person.stats.health -= (state.person.age - 40) * 0.5; 
                 
-                if(state.person.age === 100) {
-                    this.handleDeath();
-                    return;
-                }
+                if(state.person.age === 100) { this.handleDeath(); return; }
 
-                // Stage updates
+                // Stages
                 if(state.person.age === 4) { state.person.lifeStage = "Child"; state.person.avatar = "👦"; }
                 if(state.person.age === 13) { state.person.lifeStage = "Teenager"; state.person.avatar = "🧑"; }
                 if(state.person.age === 18) { state.person.lifeStage = "Young Adult"; state.person.avatar = "👨"; }
                 if(state.person.age === 40) { state.person.lifeStage = "Adult"; }
                 if(state.person.age === 65) { state.person.lifeStage = "Senior"; state.person.avatar = "👴"; UI.logEvent("Reached retirement age."); }
 
-                // History Logging for Charts
+                // Data for charts
                 const nw = state.finances.money + state.finances.bank + state.finances.stocks - state.finances.debt;
-                state.history.netWorth.push(nw);
-                if(state.history.netWorth.length > 50) state.history.netWorth.shift();
-                
-                state.history.health.push(state.person.stats.health);
-                if(state.history.health.length > 50) state.history.health.shift();
+                state.history.netWorth.push(nw); if(state.history.netWorth.length > 50) state.history.netWorth.shift();
+                state.history.health.push(state.person.stats.health); if(state.history.health.length > 50) state.history.health.shift();
 
                 UI.logEvent(`Happy Birthday! Turned ${state.person.age}.`);
+                StorageEngine.save();
+
+                // Trigger AI Decision at specific milestones to save API calls
+                if(CONSTANTS.AI_MILESTONES.includes(state.person.age)) {
+                    const decision = await AI.requestDecision(`You just turned ${state.person.age}. It's a major milestone. Re-evaluate your life focus.`);
+                    AI.processDecision(decision);
+                }
             }
 
             static generateRandomEvent() {
                 const r = Math.random();
                 if(r < 0.2) {
                     state.world.marketTrend = state.world.marketTrend === "Bull" ? "Bear" : "Bull";
-                    UI.logEvent(`Stock market shifted to ${state.world.marketTrend} market!`, "critical");
+                    UI.logEvent(`Stock market shifted to ${state.world.marketTrend}!`, "critical");
                 } else if(r < 0.4 && state.career.isEmployed) {
                     state.career.salary *= 1.1;
                     UI.logEvent("Received a raise at work!", "normal");
                 } else if(r < 0.6 && state.finances.money > 1000) {
                     state.finances.money -= 1000;
-                    UI.logEvent("Unexpected home repair cost $1000.", "critical");
-                } else if(r < 0.8 && state.person.age > 18) {
-                    state.relationships.push({ name: `Friend ${Utils.uuid().substring(0,4)}`, type: "Friend", trust: 50 });
-                    UI.logEvent("Made a new friend.", "normal");
+                    UI.logEvent("Unexpected cost: $1000.", "critical");
+                } else if (r < 0.7 && state.person.stats.health < 50) {
+                    state.person.stats.health -= 15;
+                    state.finances.debt += 5000;
+                    UI.logEvent("Suffered a medical emergency! Took on medical debt.", "critical");
                 }
             }
 
@@ -774,20 +654,14 @@ Respond ONLY in pure JSON format:
                 UI.logEvent(`${state.person.name} has passed away at age ${state.person.age}.`, "critical");
                 
                 setTimeout(() => {
-                    // Inherit and reset
                     state.generation++;
                     const inheritance = Math.max(0, state.finances.money + state.finances.bank + state.finances.stocks - state.finances.debt);
                     
                     state.person = {
-                        id: Utils.uuid(),
-                        name: `Alpha Gen ${state.generation}`,
-                        age: 1,
-                        lifeStage: "Toddler",
+                        id: Utils.uuid(), name: `Alpha Gen ${state.generation}`, age: 1, lifeStage: "Toddler",
                         personality: PERSONALITY_TRAITS[Math.floor(Math.random() * PERSONALITY_TRAITS.length)],
-                        avatar: "👶",
-                        stats: { health: 100, energy: 100, stress: 0, mood: 100 },
-                        currentAction: "Sleeping",
-                        macroFocus: "rest"
+                        avatar: "👶", stats: { health: 100, energy: 100, stress: 0, mood: 100 },
+                        currentAction: "Sleeping", macroFocus: "rest"
                     };
 
                     state.finances = { money: 0, bank: inheritance, debt: 0, stocks: 0, income: 0, expenses: 10 };
@@ -807,14 +681,11 @@ Respond ONLY in pure JSON format:
          ******************************************************************/
         function initApp() {
             UI.initCharts();
-            const hasSave = StorageEngine.load();
-
-            if(hasSave && state.apiKey) {
+            if(StorageEngine.load() && state.apiKey) {
                 document.getElementById('save-found-msg').style.display = 'block';
                 document.getElementById('api-key-input').value = state.apiKey;
             }
 
-            // Bind Setup Button
             document.getElementById('start-btn').addEventListener('click', () => {
                 const key = document.getElementById('api-key-input').value.trim();
                 if(!key) { alert("Please enter OpenRouter API key"); return; }
@@ -830,7 +701,7 @@ Respond ONLY in pure JSON format:
                 SimulationEngine.start();
             });
 
-            // Bind Manual Actions
+            // Manual Actions (Force state)
             const bindAction = (id, focus) => {
                 document.getElementById(id).addEventListener('click', () => {
                     state.person.macroFocus = focus;
@@ -844,19 +715,15 @@ Respond ONLY in pure JSON format:
             bindAction('btn-socialize', 'socialize');
             bindAction('btn-health', 'health');
 
-            // Force AI
+            // Force AI Manual Button
             document.getElementById('force-ai-btn').addEventListener('click', async () => {
                 if(state.flags.isThinking) return;
                 const decision = await AI.requestDecision("User forced a life evaluation. What is your next move?");
                 AI.processDecision(decision);
             });
-            
-            // Auto update UI in case simulation paused
-            setInterval(() => UI.drawCharts(), 1000);
         }
 
         window.onload = initApp;
-
     </script>
 </body>
 </html>
