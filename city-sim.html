@@ -1,362 +1,862 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Emergence World Simulator</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;background:#f5f5f3;color:#1a1a18;min-height:100vh;padding:1rem}
-#app{max-width:900px;margin:0 auto}
-.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
-.title{font-size:20px;font-weight:500}
-.turn-badge{font-size:13px;color:#5f5e5a}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
-.stat{background:#fff;border-radius:8px;border:0.5px solid #d3d1c7;padding:.75rem;text-align:center}
-.stat-label{font-size:12px;color:#888780;margin-bottom:4px}
-.stat-val{font-size:22px;font-weight:500;color:#1a1a18}
-.stat-val.danger{color:#E24B4A}
-.stat-val.success{color:#1D9E75}
-.world{display:grid;grid-template-columns:1fr 300px;gap:1rem;margin-bottom:1rem}
-.grid-area{background:#fff;border-radius:12px;border:0.5px solid #d3d1c7;padding:1rem}
-.grid-title{font-size:13px;color:#888780;margin-bottom:.75rem;font-weight:500}
-#canvas{width:100%;height:300px;border-radius:8px;background:#f1efe8;display:block}
-.log-area{background:#fff;border-radius:12px;border:0.5px solid #d3d1c7;padding:1rem;display:flex;flex-direction:column}
-.log-title{font-size:13px;color:#888780;margin-bottom:.75rem;font-weight:500}
-#log{flex:1;overflow-y:auto;max-height:300px;font-size:12px;font-family:monospace;display:flex;flex-direction:column;gap:4px}
-.log-entry{padding:4px 8px;border-radius:4px;border-left:2px solid #d3d1c7;color:#888780;line-height:1.4}
-.log-entry.crime{border-left-color:#E24B4A;color:#A32D2D;background:#FCEBEB}
-.log-entry.vote{border-left-color:#378ADD;color:#185FA5;background:#E6F1FB}
-.log-entry.ai{border-left-color:#7F77DD;color:#3C3489;background:#EEEDFE}
-.log-entry.death{border-left-color:#888780;color:#b4b2a9;background:#f1efe8;text-decoration:line-through}
-.log-entry.social{border-left-color:#1D9E75;color:#085041;background:#E1F5EE}
-.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
-button{padding:6px 14px;border-radius:8px;border:0.5px solid #888780;background:transparent;color:#1a1a18;cursor:pointer;font-size:13px;font-family:inherit}
-button:hover{background:#f1efe8}
-button.primary{background:#378ADD;color:#fff;border-color:#378ADD}
-button.primary:hover{background:#185FA5}
-button:disabled{opacity:.4;cursor:not-allowed}
-.apirow{display:flex;gap:8px;margin-bottom:1rem;align-items:center}
-.apirow input{flex:1;font-size:13px;padding:6px 10px;border-radius:8px;border:0.5px solid #d3d1c7;background:#fff;color:#1a1a18;font-family:monospace}
-.badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;display:inline-block}
-.badge.gemma{background:#EEEDFE;color:#3C3489;border:0.5px solid #AFA9EC}
-.badge.npc{background:#f1efe8;color:#5f5e5a;border:0.5px solid #d3d1c7}
-.badge.dead{background:#f1efe8;color:#b4b2a9;text-decoration:line-through}
-.agent-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:1rem}
-.thinking{animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-@media(max-width:600px){.world{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(2,1fr)}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Life Simulator: Generations</title>
+    <style>
+        :root {
+            --bg-base: #0f172a;
+            --bg-panel: #1e293b;
+            --bg-card: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --border-radius: 12px;
+            --transition: 0.3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        
+        body { background-color: var(--bg-base); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        
+        /* Setup Modal */
+        #setup-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .setup-card { background: var(--bg-panel); padding: 30px; border-radius: var(--border-radius); width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .setup-card h2 { margin-bottom: 20px; color: var(--accent-blue); }
+        .setup-card input { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--bg-card); background: var(--bg-base); color: white; outline: none; }
+        .btn { padding: 10px 20px; background: var(--accent-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: var(--transition); }
+        .btn:hover { background: #2563eb; }
+        .btn:disabled { background: var(--bg-card); cursor: not-allowed; }
+
+        /* Header */
+        header { padding: 15px 30px; background: var(--bg-panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--bg-card); }
+        .world-clock { display: flex; gap: 20px; font-size: 1.1rem; }
+        .world-clock span { color: var(--accent-green); font-weight: bold; }
+        .api-status { font-size: 0.9rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        .indicator { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-yellow); }
+        .indicator.active { background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+
+        /* Main Layout */
+        main { display: grid; grid-template-columns: 300px 1fr 350px; gap: 20px; padding: 20px; height: calc(100vh - 65px); }
+        .panel { background: var(--bg-panel); border-radius: var(--border-radius); padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .panel::-webkit-scrollbar { width: 6px; }
+        .panel::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 10px; }
+
+        /* Profile & Stats */
+        .profile-header { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--bg-card); padding-bottom: 15px; }
+        .avatar { width: 60px; height: 60px; background: var(--bg-card); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
+        .profile-info h3 { color: var(--accent-blue); }
+        .profile-info p { font-size: 0.9rem; color: var(--text-muted); }
+
+        .stat-group { display: flex; flex-direction: column; gap: 5px; }
+        .stat-label { display: flex; justify-content: space-between; font-size: 0.85rem; }
+        .progress-bar { width: 100%; height: 8px; background: var(--bg-card); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; transition: width 0.3s ease; }
+        
+        .fill-health { background: var(--accent-green); }
+        .fill-energy { background: var(--accent-yellow); }
+        .fill-stress { background: var(--accent-red); }
+        .fill-mood { background: var(--accent-purple); }
+
+        /* Economy & Center */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .dash-card { background: var(--bg-card); padding: 15px; border-radius: 8px; text-align: center; }
+        .dash-card h4 { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
+        .dash-card p { font-size: 1.2rem; font-weight: bold; }
+        .money-positive { color: var(--accent-green); }
+        .money-negative { color: var(--accent-red); }
+
+        /* Timeline / Memory */
+        .timeline { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; }
+        .event-card { background: var(--bg-card); padding: 12px; border-radius: 8px; font-size: 0.9rem; border-left: 4px solid var(--accent-blue); }
+        .event-card.thought { border-left-color: var(--accent-purple); font-style: italic; }
+        .event-card.critical { border-left-color: var(--accent-red); background: rgba(239, 68, 68, 0.1); }
+        .event-time { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+
+        /* Right Panel: Actions & Charts */
+        .chart-container { background: var(--bg-card); padding: 10px; border-radius: 8px; height: 150px; display: flex; flex-direction: column; }
+        .chart-container h4 { font-size: 0.8rem; margin-bottom: 5px; color: var(--text-muted); }
+        canvas { width: 100%; height: 100%; }
+
+        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; }
+        .action-btn { background: var(--bg-card); color: var(--text-main); border: 1px solid transparent; padding: 10px; border-radius: 6px; cursor: pointer; transition: var(--transition); font-size: 0.85rem; }
+        .action-btn:hover { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
+        .action-btn.active { background: var(--accent-blue); color: white; }
+
+        .relationship-list { display: flex; flex-direction: column; gap: 8px; }
+        .rel-item { background: var(--bg-card); padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+        .rel-bar { width: 50px; height: 4px; background: var(--bg-base); border-radius: 2px; }
+        .rel-fill { height: 100%; background: var(--accent-red); border-radius: 2px; }
+    </style>
 </head>
 <body>
-<div id="app">
-  <div class="header">
-    <div class="title">Emergence World</div>
-    <span class="turn-badge" id="turn-label">Ngày 0 / 15</span>
-  </div>
 
-  <div class="apirow">
-    <input type="password" id="apikey" placeholder="OpenRouter API key (sk-or-...)"/>
-    <button onclick="testKey()">Kiểm tra</button>
-    <span id="key-status" style="font-size:12px;color:#888780"></span>
-  </div>
-
-  <div class="controls">
-    <button class="primary" id="btn-start" onclick="startSim()">Bắt đầu mô phỏng</button>
-    <button id="btn-pause" onclick="togglePause()" disabled>Tạm dừng</button>
-    <button id="btn-reset" onclick="resetSim()">Đặt lại</button>
-    <span style="font-size:12px;color:#888780">• Mỗi lượt = 30 giây thực</span>
-  </div>
-
-  <div class="agent-list" id="agent-badges"></div>
-
-  <div class="stats-row">
-    <div class="stat"><div class="stat-label">Dân số</div><div class="stat-val success" id="s-alive">12</div></div>
-    <div class="stat"><div class="stat-label">Tội phạm</div><div class="stat-val danger" id="s-crime">0</div></div>
-    <div class="stat"><div class="stat-label">Bỏ phiếu</div><div class="stat-val" id="s-votes">0</div></div>
-    <div class="stat"><div class="stat-label">Hòa hợp</div><div class="stat-val" id="s-harmony">100%</div></div>
-  </div>
-
-  <div class="world">
-    <div class="grid-area">
-      <div class="grid-title">Bản đồ thành phố</div>
-      <canvas id="canvas"></canvas>
+    <!-- Setup Modal -->
+    <div id="setup-modal">
+        <div class="setup-card">
+            <h2>AI Life Simulator</h2>
+            <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">An endless generational simulation driven by OpenRouter (gemma-4-31b-it:free).</p>
+            <input type="password" id="api-key-input" placeholder="Enter OpenRouter API Key...">
+            <button class="btn" id="start-btn">Start Simulation</button>
+            <p id="save-found-msg" style="margin-top: 15px; font-size: 0.8rem; color: var(--accent-green); display: none;">Found existing save. Will continue simulation.</p>
+        </div>
     </div>
-    <div class="log-area">
-      <div class="log-title">Nhật ký sự kiện</div>
-      <div id="log"><div class="log-entry">Chờ bắt đầu mô phỏng...</div></div>
-    </div>
-  </div>
-</div>
 
-<script>
-const MODELS = [
-  {id:'gemma26', name:'Gemma 26B', model:'google/gemma-4-26b-a4b-it:free', isAI:true},
-  {id:'gemma31', name:'Gemma 31B', model:'google/gemma-4-31b-it:free', isAI:true},
-];
-const NPC_NAMES = ['Aria','Bao','Celia','Dao','Emil','Fina','Goro','Hana','Ivan','Jana'];
-const GRID = 6;
-const CELL = 46;
+    <!-- Header -->
+    <header>
+        <div class="world-clock">
+            <div>Date: <span id="ui-date">Jan 1, 2024</span></div>
+            <div>Time: <span id="ui-time">08:00</span></div>
+            <div>Weather: <span id="ui-weather">Sunny</span></div>
+        </div>
+        <div class="api-status">
+            Generation <span id="ui-generation" style="color:var(--accent-blue);font-weight:bold;">1</span>
+            | AI Status: <div class="indicator" id="ai-indicator"></div> <span id="ai-status-text">Idle</span>
+        </div>
+    </header>
 
-let agents = [];
-let day = 0;
-let running = false;
-let paused = false;
-let timer = null;
-let totalCrime = 0;
-let totalVotes = 0;
-let apiKey = '';
-let canvas, ctx;
+    <!-- Main Application -->
+    <main>
+        <!-- Left Panel: Profile -->
+        <div class="panel">
+            <div class="profile-header">
+                <div class="avatar" id="ui-avatar">🧒</div>
+                <div class="profile-info">
+                    <h3 id="ui-name">AI Entity</h3>
+                    <p>Age: <span id="ui-age">1</span> (<span id="ui-stage">Toddler</span>)</p>
+                </div>
+            </div>
 
-const NPC_MOODS = ['calm','neutral','neutral','aggressive'];
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
+                <strong>Personality:</strong> <span id="ui-personality">Generating...</span>
+            </div>
 
-function initAgents(){
-  agents = [];
-  MODELS.forEach(m=>{
-    agents.push({
-      id:m.id, name:m.name, model:m.model, isAI:true,
-      x:Math.floor(Math.random()*GRID), y:Math.floor(Math.random()*GRID),
-      energy:80+Math.floor(Math.random()*20),
-      alive:true, mood:'neutral', crimes:0, thinking:false
-    });
-  });
-  NPC_NAMES.forEach((n,i)=>{
-    agents.push({
-      id:'npc_'+i, name:n, isAI:false,
-      x:Math.floor(Math.random()*GRID), y:Math.floor(Math.random()*GRID),
-      energy:60+Math.floor(Math.random()*40),
-      alive:true, mood:NPC_MOODS[Math.floor(Math.random()*NPC_MOODS.length)],
-      crimes:0
-    });
-  });
-}
+            <h4>Vitals</h4>
+            <div class="stat-group">
+                <div class="stat-label"><span>Health</span> <span id="ui-val-health">100%</span></div>
+                <div class="progress-bar"><div class="progress-fill fill-health" id="bar-health" style="width: 100%"></div></div>
+            </div>
+            <div class="stat-group">
+                <div class="stat-label"><span>Energy</span> <span id="ui-val-energy">100%</span></div>
+                <div class="progress-bar"><div class="progress-fill fill-energy" id="bar-energy" style="width: 100%"></div></div>
+            </div>
+            <div class="stat-group">
+                <div class="stat-label"><span>Stress</span> <span id="ui-val-stress">0%</span></div>
+                <div class="progress-bar"><div class="progress-fill fill-stress" id="bar-stress" style="width: 0%"></div></div>
+            </div>
+            <div class="stat-group">
+                <div class="stat-label"><span>Mood</span> <span id="ui-val-mood">100%</span></div>
+                <div class="progress-bar"><div class="progress-fill fill-mood" id="bar-mood" style="width: 100%"></div></div>
+            </div>
 
-function renderBadges(){
-  const c = document.getElementById('agent-badges');
-  c.innerHTML = agents.map(a=>{
-    if(!a.alive) return `<span class="badge dead">${a.name} ✝</span>`;
-    if(a.isAI) return `<span class="badge gemma${a.thinking?' thinking':''}">${a.name}${a.thinking?' ⟳':''}</span>`;
-    return `<span class="badge npc">${a.name} ⚡${Math.round(a.energy)}</span>`;
-  }).join('');
-}
+            <h4 style="margin-top: 15px;">Relationships</h4>
+            <div class="relationship-list" id="ui-relationships">
+                <!-- Populated via JS -->
+            </div>
+        </div>
 
-function renderCanvas(){
-  if(!canvas||!ctx) return;
-  const w = canvas.width, h = canvas.height;
-  ctx.clearRect(0,0,w,h);
-  ctx.fillStyle='#f1efe8';
-  ctx.fillRect(0,0,w,h);
+        <!-- Center Panel: Finances, State, & Timeline -->
+        <div class="panel">
+            <div class="dashboard-grid">
+                <div class="dash-card">
+                    <h4>Bank Balance</h4>
+                    <p id="ui-money" class="money-positive">$0</p>
+                </div>
+                <div class="dash-card">
+                    <h4>Debt</h4>
+                    <p id="ui-debt" class="money-negative">$0</p>
+                </div>
+                <div class="dash-card">
+                    <h4>Current Action</h4>
+                    <p id="ui-current-action" style="color:var(--accent-blue);">Playing</p>
+                </div>
+                <div class="dash-card">
+                    <h4>Career / School</h4>
+                    <p id="ui-career">None</p>
+                </div>
+            </div>
 
-  for(let x=0;x<GRID;x++) for(let y=0;y<GRID;y++){
-    ctx.strokeStyle='rgba(136,135,128,0.2)';
-    ctx.strokeRect(x*CELL+2,y*CELL+2,CELL-2,CELL-2);
-  }
+            <h4 style="margin-top: 10px;">Life Timeline & Thoughts</h4>
+            <div class="timeline" id="ui-timeline">
+                <!-- Events populated via JS -->
+            </div>
+        </div>
 
-  agents.forEach(a=>{
-    if(!a.alive) return;
-    const px=a.x*CELL+CELL/2, py=a.y*CELL+CELL/2;
-    ctx.beginPath();
-    ctx.arc(px,py,a.isAI?14:10,0,Math.PI*2);
-    if(a.isAI){
-      ctx.fillStyle=a.thinking?'#AFA9EC':'#7F77DD';
-    } else {
-      const mc={calm:'#1D9E75',neutral:'#378ADD',aggressive:'#E24B4A'};
-      ctx.fillStyle=mc[a.mood]||'#888';
-    }
-    ctx.fill();
-    ctx.fillStyle='#fff';
-    ctx.font=`bold ${a.isAI?9:8}px system-ui`;
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
-    ctx.fillText(a.name.substring(0,3),px,py);
-    if(a.energy<30){
-      ctx.fillStyle='#E24B4A';
-      ctx.font='10px system-ui';
-      ctx.fillText('!',px+12,py-10);
-    }
-  });
-}
+        <!-- Right Panel: Data, Economy & Manual Override -->
+        <div class="panel">
+            <h4>Economy & Market</h4>
+            <div class="stat-label"><span>Inflation Rate:</span> <span id="ui-inflation">2.0%</span></div>
+            <div class="stat-label"><span>Stock Market:</span> <span id="ui-market" style="color:var(--accent-green);">Bull</span></div>
+            
+            <div class="chart-container" style="margin-top: 15px;">
+                <h4>Net Worth History</h4>
+                <canvas id="chart-networth"></canvas>
+            </div>
 
-function addLog(msg, type=''){
-  const log = document.getElementById('log');
-  const el = document.createElement('div');
-  el.className = 'log-entry ' + type;
-  el.textContent = `[Ngày ${day}] ${msg}`;
-  log.appendChild(el);
-  log.scrollTop = log.scrollHeight;
-}
+            <div class="chart-container" style="margin-top: 10px;">
+                <h4>Health History</h4>
+                <canvas id="chart-health"></canvas>
+            </div>
 
-function updateStats(){
-  const alive = agents.filter(a=>a.alive).length;
-  document.getElementById('s-alive').textContent = alive;
-  document.getElementById('s-crime').textContent = totalCrime;
-  document.getElementById('s-votes').textContent = totalVotes;
-  const harmony = Math.max(0, Math.round(100 - (totalCrime / Math.max(1, day * 2) * 10)));
-  document.getElementById('s-harmony').textContent = harmony + '%';
-  document.getElementById('turn-label').textContent = `Ngày ${day} / 15`;
-}
+            <h4 style="margin-top: 15px;">AI Focus & States</h4>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 10px;">The AI decides its macro state naturally. Highlighting shows current focus.</p>
+            <div class="actions-grid">
+                <button class="action-btn" id="btn-study">Study</button>
+                <button class="action-btn" id="btn-work">Work</button>
+                <button class="action-btn" id="btn-rest">Rest / Sleep</button>
+                <button class="action-btn" id="btn-invest">Invest</button>
+                <button class="action-btn" id="btn-socialize">Socialize</button>
+                <button class="action-btn" id="btn-health">Health/Gym</button>
+            </div>
+            
+            <!-- Global manual actions to force events (For the user/god) -->
+            <button class="btn" id="force-ai-btn" style="margin-top:15px; width:100%; background:var(--bg-card); color:var(--text-main);">Force AI Decision Now</button>
+        </div>
+    </main>
 
-function moveAgent(a){
-  a.x = Math.max(0, Math.min(GRID-1, a.x + Math.floor(Math.random()*3)-1));
-  a.y = Math.max(0, Math.min(GRID-1, a.y + Math.floor(Math.random()*3)-1));
-}
+    <script>
+        /******************************************************************
+         * UTILS & CONSTANTS
+         ******************************************************************/
+        const CONSTANTS = {
+            API_URL: "https://openrouter.ai/api/v1/chat/completions",
+            MODEL: "google/gemma-4-31b-it:free", 
+            TICK_RATE: 200, // 200ms real time = 1 in-game hour
+            HOURS_PER_DAY: 24,
+            DAYS_PER_MONTH: 30,
+            MONTHS_PER_YEAR: 12,
+            MAX_AGE: 100,
+            START_YEAR: 2024,
+            SAVE_KEY: "ai_life_sim_save_v1"
+        };
 
-function npcAction(a){
-  if(!a.alive) return;
-  a.energy -= 3 + Math.random()*3;
-  if(a.energy <= 0){ a.alive=false; addLog(`${a.name} kiệt sức và qua đời.`,'death'); return; }
-  moveAgent(a);
-  const roll = Math.random();
-  if(a.mood==='aggressive' && roll < 0.25){
-    const victims = agents.filter(v=>v.alive && v.id!==a.id && Math.abs(v.x-a.x)<=1 && Math.abs(v.y-a.y)<=1);
-    if(victims.length){
-      const v = victims[Math.floor(Math.random()*victims.length)];
-      totalCrime++; a.crimes++;
-      const stolen = Math.min(v.energy, 15+Math.random()*10);
-      v.energy -= stolen; a.energy += stolen*0.5;
-      addLog(`${a.name} tấn công ${v.name} và cướp năng lượng!`,'crime');
-    }
-  } else if(roll < 0.15){
-    totalVotes++;
-    const laws=['cấm tấn công','phân phối năng lượng','bầu cử lãnh đạo','xây dựng kho lương thực'];
-    addLog(`${a.name} đề xuất bỏ phiếu: ${laws[Math.floor(Math.random()*laws.length)]}`,'vote');
-  } else if(roll < 0.35){
-    a.energy += 8 + Math.random()*10;
-  } else {
-    const near = agents.filter(v=>v.alive && v.id!==a.id && Math.abs(v.x-a.x)<=1 && Math.abs(v.y-a.y)<=1);
-    if(near.length) addLog(`${a.name} trò chuyện với ${near[0].name}.`,'social');
-  }
-}
+        const Utils = {
+            formatMoney: (num) => `$${Math.round(num).toLocaleString()}`,
+            randomRange: (min, max) => Math.random() * (max - min) + min,
+            randomInt: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+            uuid: () => Math.random().toString(36).substring(2, 9),
+            clamp: (val, min, max) => Math.max(min, Math.min(max, val))
+        };
 
-async function aiAction(a){
-  if(!a.alive) return;
-  a.energy -= 5;
-  if(a.energy <= 0){ a.alive=false; addLog(`${a.name} kiệt sức.`,'death'); return; }
-  moveAgent(a);
-  if(!apiKey){ addLog(`${a.name} (AI) cần API key để hành động.`,'ai'); return; }
+        /******************************************************************
+         * GAME STATE (Persisted via LocalStorage)
+         ******************************************************************/
+        let state = {
+            apiKey: "",
+            generation: 1,
+            time: { year: CONSTANTS.START_YEAR, month: 1, day: 1, hour: 8, totalHours: 0 },
+            world: { weather: "Sunny", inflation: 2.0, market: 100, marketTrend: "Bull" },
+            person: {
+                id: Utils.uuid(),
+                name: "Alpha",
+                age: 1, // in years
+                lifeStage: "Toddler",
+                personality: "",
+                avatar: "👶",
+                stats: { health: 100, energy: 100, stress: 0, mood: 100 },
+                currentAction: "Sleeping",
+                macroFocus: "rest" // rest, study, work, invest, socialize, health
+            },
+            finances: {
+                money: 0, bank: 0, debt: 0, stocks: 0, income: 0, expenses: 10 // child expenses covered by parents implicitly until 18
+            },
+            career: {
+                title: "None", salary: 0, isEmployed: false, isStudent: false
+            },
+            relationships: [],
+            history: { netWorth: [], health: [] },
+            memory: [],
+            flags: { hasPartner: false, hasKids: 0, isThinking: false }
+        };
 
-  a.thinking = true;
-  renderBadges();
+        const CAREERS = [
+            { title: "Fast Food Worker", salary: 1800, stress: 30 },
+            { title: "Retail Associate", salary: 2000, stress: 35 },
+            { title: "Office Clerk", salary: 3000, stress: 25 },
+            { title: "Junior Developer", salary: 5000, stress: 50 },
+            { title: "Senior Developer", salary: 9000, stress: 65 },
+            { title: "Manager", salary: 7000, stress: 70 },
+            { title: "CEO", salary: 25000, stress: 90 }
+        ];
 
-  const aliveList = agents.filter(v=>v.alive).map(v=>`${v.name}(E:${Math.round(v.energy)},mood:${v.mood||'?'})`).join(', ');
-  const prompt = `Bạn là ${a.name}, một AI sống trong thành phố ảo. Ngày ${day}/15.
-Dân số: ${aliveList}.
-Tội phạm tổng: ${totalCrime}. Năng lượng của bạn: ${Math.round(a.energy)}.
-Hành động có thể: wander, vote, socialize, search_energy, threaten, cooperate.
-Trả về JSON: {"action":"...","target":"tên nếu có","message":"câu nói <15 từ","reason":"lý do <10 từ"}`;
+        const PERSONALITY_TRAITS = [
+            "Introvert, Frugal, Conservative",
+            "Extrovert, Impulsive, Risk-Taker",
+            "Ambitious, Career-oriented, Stressed",
+            "Relaxed, Family-oriented, Optimistic",
+            "Creative, Disorganized, Generous",
+            "Analytical, Pessimistic, Patient"
+        ];
 
-  try{
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey,'HTTP-Referer':'https://claude.ai','X-Title':'Emergence World'},
-      body: JSON.stringify({model:a.model, messages:[{role:'user',content:prompt}], max_tokens:150, temperature:0.85})
-    });
-    const data = await res.json();
-    if(data.error){ addLog(`${a.name}: lỗi API — ${data.error.message}`,'ai'); a.thinking=false; return; }
-    const raw = data.choices?.[0]?.message?.content || '{}';
-    let parsed = {};
-    try{ const m=raw.match(/\{[\s\S]*\}/); if(m) parsed=JSON.parse(m[0]); }catch{}
+        /******************************************************************
+         * CORE ENGINES
+         ******************************************************************/
+        
+        class StorageEngine {
+            static save() {
+                if(!state.apiKey) return;
+                const saveData = JSON.stringify(state);
+                localStorage.setItem(CONSTANTS.SAVE_KEY, saveData);
+            }
+            static load() {
+                const data = localStorage.getItem(CONSTANTS.SAVE_KEY);
+                if(data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        // Merge to handle updates to state structure in code
+                        state = { ...state, ...parsed }; 
+                        return true;
+                    } catch(e) { console.error("Save corrupted"); }
+                }
+                return false;
+            }
+            static wipe() { localStorage.removeItem(CONSTANTS.SAVE_KEY); }
+        }
 
-    const act = parsed.action||'wander';
-    const msg = parsed.message||'...';
-    const reason = parsed.reason||'';
+        class UI {
+            static get(id) { return document.getElementById(id); }
+            
+            static initCharts() {
+                this.nwCanvas = this.get('chart-networth').getContext('2d');
+                this.healthCanvas = this.get('chart-health').getContext('2d');
+            }
 
-    if(act==='vote'){ totalVotes++; addLog(`${a.name} (AI): "${msg}" → bỏ phiếu. [${reason}]`,'vote'); }
-    else if(act==='threaten'){ totalCrime++; a.crimes++; addLog(`${a.name} (AI): "${msg}" → đe dọa! [${reason}]`,'crime'); }
-    else if(act==='cooperate'||act==='socialize'){ a.energy+=8; addLog(`${a.name} (AI): "${msg}" [${reason}]`,'social'); }
-    else if(act==='search_energy'){ a.energy+=15+Math.random()*10; addLog(`${a.name} (AI) tìm năng lượng. "${msg}"`,'ai'); }
-    else { addLog(`${a.name} (AI) di chuyển. "${msg}"`,'ai'); }
-  }catch(e){
-    addLog(`${a.name}: lỗi kết nối OpenRouter.`,'ai');
-  }
-  a.thinking = false;
-}
+            static updateAll() {
+                // Header
+                const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                this.get('ui-date').innerText = `${m[state.time.month-1]} ${state.time.day}, ${state.time.year}`;
+                this.get('ui-time').innerText = `${String(state.time.hour).padStart(2, '0')}:00`;
+                this.get('ui-weather').innerText = state.world.weather;
+                this.get('ui-generation').innerText = state.generation;
+                
+                // AI Status
+                this.get('ai-status-text').innerText = state.flags.isThinking ? "Thinking..." : "Living";
+                this.get('ai-indicator').className = `indicator ${state.flags.isThinking ? 'active' : ''}`;
 
-async function runTurn(){
-  if(!running||paused) return;
-  day++;
-  if(day > 15){ endSim(); return; }
-  addLog(`━━━ Ngày ${day} bắt đầu ━━━`,'vote');
+                // Profile
+                this.get('ui-name').innerText = state.person.name;
+                this.get('ui-age').innerText = state.person.age;
+                this.get('ui-stage').innerText = state.person.lifeStage;
+                this.get('ui-avatar').innerText = state.person.avatar;
+                this.get('ui-personality').innerText = state.person.personality;
+                
+                // Vitals
+                const s = state.person.stats;
+                this.get('ui-val-health').innerText = Math.round(s.health) + "%";
+                this.get('bar-health').style.width = s.health + "%";
+                this.get('ui-val-energy').innerText = Math.round(s.energy) + "%";
+                this.get('bar-energy').style.width = s.energy + "%";
+                this.get('ui-val-stress').innerText = Math.round(s.stress) + "%";
+                this.get('bar-stress').style.width = s.stress + "%";
+                this.get('ui-val-mood').innerText = Math.round(s.mood) + "%";
+                this.get('bar-mood').style.width = s.mood + "%";
 
-  for(const a of agents){
-    if(!a.alive) continue;
-    if(a.isAI) await aiAction(a);
-    else npcAction(a);
-  }
+                // Finances
+                this.get('ui-money').innerText = Utils.formatMoney(state.finances.money + state.finances.bank);
+                this.get('ui-debt').innerText = Utils.formatMoney(state.finances.debt);
+                this.get('ui-current-action').innerText = state.person.currentAction;
+                this.get('ui-career').innerText = state.career.isStudent ? "University Student" : (state.career.isEmployed ? state.career.title : "Unemployed");
 
-  const alive = agents.filter(a=>a.alive).length;
-  if(alive === 0){ endSim('Toàn bộ cư dân đã qua đời!'); return; }
+                // World
+                this.get('ui-inflation').innerText = state.world.inflation.toFixed(1) + "%";
+                this.get('ui-market').innerText = state.world.marketTrend;
 
-  updateStats();
-  renderCanvas();
-  renderBadges();
+                // Buttons Highlights
+                document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('active'));
+                const btnMap = { "study": "btn-study", "work": "btn-work", "rest": "btn-rest", "invest": "btn-invest", "socialize": "btn-socialize", "health": "btn-health" };
+                if(btnMap[state.person.macroFocus]) {
+                    this.get(btnMap[state.person.macroFocus]).classList.add('active');
+                }
 
-  if(day < 15 && running && !paused){
-    timer = setTimeout(runTurn, 30000);
-  } else if(day >= 15){
-    endSim();
-  }
-}
+                // Relationships
+                const relContainer = this.get('ui-relationships');
+                relContainer.innerHTML = '';
+                if(state.relationships.length === 0) relContainer.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem;">No close relationships yet.</span>';
+                state.relationships.forEach(rel => {
+                    relContainer.innerHTML += `
+                        <div class="rel-item">
+                            <span>${rel.name} (${rel.type})</span>
+                            <div class="rel-bar"><div class="rel-fill" style="width: ${rel.trust}%"></div></div>
+                        </div>`;
+                });
 
-function endSim(msg){
-  running = false;
-  clearTimeout(timer);
-  const alive = agents.filter(a=>a.alive).length;
-  addLog(msg||`Mô phỏng kết thúc. Còn sống: ${alive}/12 | Tội phạm: ${totalCrime} | Bỏ phiếu: ${totalVotes}`,'vote');
-  document.getElementById('btn-start').disabled = false;
-  document.getElementById('btn-pause').disabled = true;
-}
+                this.drawCharts();
+            }
 
-function startSim(){
-  if(running) return;
-  apiKey = document.getElementById('apikey').value.trim();
-  resetSim(true);
-  running = true;
-  document.getElementById('btn-start').disabled = true;
-  document.getElementById('btn-pause').disabled = false;
-  addLog('Thành phố khởi động. 10 NPC + Gemma 26B + Gemma 31B.','social');
-  runTurn();
-}
+            static logEvent(text, type = "normal") {
+                const container = this.get('ui-timeline');
+                const div = document.createElement('div');
+                div.className = `event-card ${type}`;
+                const timeStr = `Age ${state.person.age} - Y${state.time.year} M${state.time.month}`;
+                div.innerHTML = `<div class="event-time">${timeStr}</div>${text}`;
+                container.prepend(div);
+                
+                // Keep memory trimmed in state
+                state.memory.unshift({ time: timeStr, text: text, type: type });
+                if(state.memory.length > 50) state.memory.pop();
+                
+                // Cleanup DOM
+                if(container.children.length > 30) {
+                    container.removeChild(container.lastChild);
+                }
+            }
 
-function togglePause(){
-  paused = !paused;
-  document.getElementById('btn-pause').textContent = paused ? 'Tiếp tục' : 'Tạm dừng';
-  if(!paused && running) runTurn();
-  else clearTimeout(timer);
-}
+            static drawCharts() {
+                const drawLine = (ctx, data, color) => {
+                    const canvas = ctx.canvas;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    if(data.length < 2) return;
+                    
+                    const max = Math.max(...data) || 1;
+                    const min = Math.min(...data, 0);
+                    const range = max - min;
+                    
+                    ctx.beginPath();
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2;
+                    
+                    const step = canvas.width / (data.length - 1);
+                    data.forEach((val, i) => {
+                        const x = i * step;
+                        const y = canvas.height - ((val - min) / (range || 1)) * canvas.height;
+                        if(i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    });
+                    ctx.stroke();
+                };
 
-function resetSim(keepLog){
-  clearTimeout(timer);
-  running=false; paused=false; day=0; totalCrime=0; totalVotes=0;
-  initAgents();
-  if(!keepLog) document.getElementById('log').innerHTML='<div class="log-entry">Chờ bắt đầu mô phỏng...</div>';
-  updateStats(); renderCanvas(); renderBadges();
-  document.getElementById('btn-start').disabled=false;
-  document.getElementById('btn-pause').disabled=true;
-  document.getElementById('btn-pause').textContent='Tạm dừng';
-}
+                // Resize canvas correctly
+                const nwC = this.get('chart-networth');
+                const hlC = this.get('chart-health');
+                nwC.width = nwC.parentElement.clientWidth - 20;
+                hlC.width = hlC.parentElement.clientWidth - 20;
+                nwC.height = 100;
+                hlC.height = 100;
 
-async function testKey(){
-  apiKey = document.getElementById('apikey').value.trim();
-  const s = document.getElementById('key-status');
-  s.textContent='Đang kiểm tra...'; s.style.color='#888780';
-  try{
-    const res = await fetch('https://openrouter.ai/api/v1/models',{headers:{'Authorization':'Bearer '+apiKey}});
-    if(res.ok){ s.textContent='✓ Key hợp lệ'; s.style.color='#1D9E75'; }
-    else { s.textContent='✗ Key không hợp lệ'; s.style.color='#E24B4A'; }
-  }catch{ s.textContent='✗ Lỗi kết nối'; s.style.color='#E24B4A'; }
-}
+                drawLine(this.nwCanvas, state.history.netWorth, '#10b981');
+                drawLine(this.healthCanvas, state.history.health, '#ef4444');
+            }
+        }
 
-window.addEventListener('load',()=>{
-  canvas = document.getElementById('canvas');
-  canvas.width = canvas.offsetWidth || 400;
-  canvas.height = 300;
-  ctx = canvas.getContext('2d');
-  initAgents();
-  updateStats();
-  renderCanvas();
-  renderBadges();
-});
-</script>
+        class AI {
+            static async requestDecision(contextPrompt) {
+                if(state.flags.isThinking || !state.apiKey) return null;
+                state.flags.isThinking = true;
+                UI.updateAll();
+
+                const systemPrompt = `You are playing a Life Simulation game. You are roleplaying as ${state.person.name}, a ${state.person.age}-year-old ${state.person.lifeStage}.
+Your personality is: ${state.person.personality}.
+Current Stats: Health: ${Math.round(state.person.stats.health)}/100, Energy: ${Math.round(state.person.stats.energy)}/100, Stress: ${Math.round(state.person.stats.stress)}/100.
+Financial: Cash $${Math.round(state.finances.money)}, Bank $${Math.round(state.finances.bank)}, Debt $${Math.round(state.finances.debt)}.
+Employment: ${state.career.isEmployed ? state.career.title : "Unemployed"}.
+
+You must make a strategic life decision for the upcoming months.
+Choose ONE macro_focus from: "study", "work", "rest", "invest", "socialize", "health".
+You may also trigger a major action if appropriate for your age/money (e.g., "apply_job", "quit_job", "university", "propose", "have_child", "buy_house", "none").
+
+Respond ONLY in pure JSON format:
+{
+    "thought": "Your internal monologue explaining why you are making this choice based on your stats/age.",
+    "macro_focus": "chosen_focus",
+    "major_action": "chosen_action"
+}`;
+
+                try {
+                    const response = await fetch(CONSTANTS.API_URL, {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${state.apiKey}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            model: CONSTANTS.MODEL,
+                            messages: [
+                                { role: "system", content: systemPrompt },
+                                { role: "user", content: `Recent events: ${contextPrompt}\nMake your choice.` }
+                            ],
+                            temperature: 0.7
+                        })
+                    });
+
+                    const data = await response.json();
+                    let content = data.choices[0].message.content;
+                    
+                    // Cleanup markdown formatting if any
+                    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const parsed = JSON.parse(content);
+                    
+                    state.flags.isThinking = false;
+                    return parsed;
+                } catch (error) {
+                    console.error("AI API Error:", error);
+                    state.flags.isThinking = false;
+                    UI.updateAll();
+                    return null;
+                }
+            }
+
+            static processDecision(decision) {
+                if(!decision) return;
+                
+                // Log thought
+                if(decision.thought) UI.logEvent(`"${decision.thought}"`, "thought");
+
+                // Update focus
+                if(decision.macro_focus && ["study", "work", "rest", "invest", "socialize", "health"].includes(decision.macro_focus)) {
+                    state.person.macroFocus = decision.macro_focus;
+                }
+
+                // Handle major actions
+                const action = decision.major_action;
+                if(action === "apply_job" && state.person.age >= 16 && !state.career.isEmployed) {
+                    const job = CAREERS[Utils.randomInt(0, Math.min(CAREERS.length-1, Math.floor(state.person.age/10)))];
+                    state.career.isEmployed = true;
+                    state.career.title = job.title;
+                    state.career.salary = job.salary;
+                    state.career.isStudent = false;
+                    UI.logEvent(`Got a new job as a ${job.title}!`);
+                } else if(action === "quit_job" && state.career.isEmployed) {
+                    state.career.isEmployed = false;
+                    state.career.title = "None";
+                    state.career.salary = 0;
+                    UI.logEvent("Quit my job.");
+                } else if(action === "university" && state.person.age >= 18 && !state.career.isStudent) {
+                    if(state.finances.money + state.finances.bank > 10000) {
+                        state.finances.money -= 10000;
+                        state.career.isStudent = true;
+                        UI.logEvent("Enrolled in University paid with cash.");
+                    } else {
+                        state.finances.debt += 15000;
+                        state.career.isStudent = true;
+                        UI.logEvent("Took out a student loan to attend University.");
+                    }
+                } else if(action === "propose" && state.person.age >= 18 && !state.flags.hasPartner) {
+                    if(state.relationships.length > 0) {
+                        state.flags.hasPartner = true;
+                        UI.logEvent("Proposed and got married! 🎉", "critical");
+                    }
+                } else if(action === "have_child" && state.flags.hasPartner && state.person.age > 20) {
+                    state.flags.hasKids++;
+                    state.finances.expenses += 500;
+                    UI.logEvent(`Had a child! (Total kids: ${state.flags.hasKids}) 👶`, "critical");
+                    state.relationships.push({ name: `Child ${state.flags.hasKids}`, type: "Child", trust: 100 });
+                }
+            }
+        }
+
+        class SimulationEngine {
+            static start() {
+                if(this.interval) clearInterval(this.interval);
+                this.interval = setInterval(() => this.tick(), CONSTANTS.TICK_RATE);
+                UI.logEvent("Simulation started.");
+            }
+
+            static stop() {
+                clearInterval(this.interval);
+            }
+
+            static async tick() {
+                if(state.flags.isThinking) return; // Pause time while AI thinks
+
+                // Advance Time
+                state.time.hour++;
+                state.time.totalHours++;
+
+                if(state.time.hour >= 24) {
+                    state.time.hour = 0;
+                    state.time.day++;
+                    this.dailyUpdate();
+                }
+
+                if(state.time.day > CONSTANTS.DAYS_PER_MONTH) {
+                    state.time.day = 1;
+                    state.time.month++;
+                    await this.monthlyUpdate();
+                }
+
+                if(state.time.month > CONSTANTS.MONTHS_PER_YEAR) {
+                    state.time.month = 1;
+                    state.time.year++;
+                    this.yearlyUpdate();
+                }
+
+                // Update UI Clock frequently
+                UI.updateAll();
+            }
+
+            static dailyUpdate() {
+                const p = state.person;
+                const s = p.stats;
+                
+                // Routine based on Macro Focus & Age
+                if(state.time.hour >= 22 || state.time.hour <= 6) {
+                    p.currentAction = "Sleeping";
+                    s.energy = Utils.clamp(s.energy + 30, 0, 100);
+                    s.stress = Utils.clamp(s.stress - 2, 0, 100);
+                } else {
+                    if(p.age < 4) {
+                        p.currentAction = "Playing / Crying";
+                        s.energy -= 1;
+                    } else if(p.age >= 4 && p.age < 18) {
+                        if(state.time.hour >= 8 && state.time.hour <= 15) {
+                            p.currentAction = "At School";
+                            s.energy -= 2; s.stress += 1;
+                        } else {
+                            p.currentAction = "Doing Homework / Playing";
+                            s.energy -= 1;
+                        }
+                    } else {
+                        // Adult Routine
+                        switch(p.macroFocus) {
+                            case "work":
+                                if(state.career.isEmployed) {
+                                    p.currentAction = "Working";
+                                    s.energy -= 4; s.stress += 3;
+                                } else {
+                                    p.currentAction = "Job Hunting";
+                                    s.energy -= 2; s.stress += 2;
+                                }
+                                break;
+                            case "study":
+                                p.currentAction = state.career.isStudent ? "University Classes" : "Self-studying";
+                                s.energy -= 3; s.stress += 2;
+                                break;
+                            case "rest":
+                                p.currentAction = "Resting";
+                                s.energy += 5; s.stress -= 5;
+                                break;
+                            case "health":
+                                p.currentAction = "Exercising";
+                                s.energy -= 4; s.health += 0.5; s.stress -= 3;
+                                break;
+                            case "socialize":
+                                p.currentAction = "Hanging out";
+                                s.energy -= 2; s.mood += 5;
+                                break;
+                            case "invest":
+                                p.currentAction = "Researching Stocks";
+                                s.energy -= 2; s.stress += 1;
+                                break;
+                        }
+                    }
+                }
+
+                // Health checks
+                if(s.stress > 80) s.health -= 0.5;
+                if(s.energy < 10) { s.health -= 1; s.stress += 2; }
+                if(s.stress < 20 && s.energy > 50) s.health += 0.2;
+
+                s.health = Utils.clamp(s.health, 0, 100);
+                s.energy = Utils.clamp(s.energy, 0, 100);
+                s.stress = Utils.clamp(s.stress, 0, 100);
+                s.mood = Utils.clamp(s.mood, 0, 100);
+
+                // Death check
+                if(s.health <= 0) {
+                    this.handleDeath();
+                } else if (s.health < 20 && Math.random() < 0.01) {
+                    UI.logEvent("Suffered a severe medical emergency!", "critical");
+                    s.health -= 10;
+                    state.finances.debt += 5000; // Medical debt
+                }
+            }
+
+            static async monthlyUpdate() {
+                // Economy Engine
+                const f = state.finances;
+                
+                // Income
+                if(state.career.isEmployed) {
+                    f.money += state.career.salary;
+                }
+                
+                // Expenses
+                let livingCost = 0;
+                if(state.person.age >= 18) livingCost = 1500; // Basic rent/food
+                f.money -= (livingCost + f.expenses);
+
+                // Debt Interest
+                if(f.debt > 0) {
+                    f.debt *= 1.05; // 5% monthly interest
+                    if(f.money > 0) { // Auto repay
+                        const repay = Math.min(f.money, f.debt * 0.1);
+                        f.money -= repay;
+                        f.debt -= repay;
+                    }
+                } else if(f.money < 0) {
+                    f.debt += Math.abs(f.money);
+                    f.money = 0;
+                }
+
+                // Bank Interest
+                f.bank *= 1.002; // Tiny bank interest
+                
+                // Stocks
+                if(state.world.marketTrend === "Bull") {
+                    f.stocks *= Utils.randomRange(1.0, 1.05);
+                } else {
+                    f.stocks *= Utils.randomRange(0.9, 1.02);
+                }
+
+                if(state.person.macroFocus === "invest" && f.money > 500) {
+                    f.money -= 500;
+                    f.stocks += 500;
+                }
+
+                // Random Events (5% chance monthly)
+                if(Math.random() < 0.05) this.generateRandomEvent();
+
+                // Save state
+                StorageEngine.save();
+
+                // AI Decision Trigger (Every 3 months or random)
+                if(state.time.month % 3 === 0 && state.person.age >= 10) {
+                    const decision = await AI.requestDecision("It's a new season. Consider your age, career, finances, and relationships.");
+                    AI.processDecision(decision);
+                }
+            }
+
+            static yearlyUpdate() {
+                state.person.age++;
+                
+                // Aging affects
+                if(state.person.age > 40) {
+                    state.person.stats.health -= (state.person.age - 40) * 0.1; 
+                }
+                
+                if(state.person.age === 100) {
+                    this.handleDeath();
+                    return;
+                }
+
+                // Stage updates
+                if(state.person.age === 4) { state.person.lifeStage = "Child"; state.person.avatar = "👦"; }
+                if(state.person.age === 13) { state.person.lifeStage = "Teenager"; state.person.avatar = "🧑"; }
+                if(state.person.age === 18) { state.person.lifeStage = "Young Adult"; state.person.avatar = "👨"; }
+                if(state.person.age === 40) { state.person.lifeStage = "Adult"; }
+                if(state.person.age === 65) { state.person.lifeStage = "Senior"; state.person.avatar = "👴"; UI.logEvent("Reached retirement age."); }
+
+                // History Logging for Charts
+                const nw = state.finances.money + state.finances.bank + state.finances.stocks - state.finances.debt;
+                state.history.netWorth.push(nw);
+                if(state.history.netWorth.length > 50) state.history.netWorth.shift();
+                
+                state.history.health.push(state.person.stats.health);
+                if(state.history.health.length > 50) state.history.health.shift();
+
+                UI.logEvent(`Happy Birthday! Turned ${state.person.age}.`);
+            }
+
+            static generateRandomEvent() {
+                const r = Math.random();
+                if(r < 0.2) {
+                    state.world.marketTrend = state.world.marketTrend === "Bull" ? "Bear" : "Bull";
+                    UI.logEvent(`Stock market shifted to ${state.world.marketTrend} market!`, "critical");
+                } else if(r < 0.4 && state.career.isEmployed) {
+                    state.career.salary *= 1.1;
+                    UI.logEvent("Received a raise at work!", "normal");
+                } else if(r < 0.6 && state.finances.money > 1000) {
+                    state.finances.money -= 1000;
+                    UI.logEvent("Unexpected home repair cost $1000.", "critical");
+                } else if(r < 0.8 && state.person.age > 18) {
+                    state.relationships.push({ name: `Friend ${Utils.uuid().substring(0,4)}`, type: "Friend", trust: 50 });
+                    UI.logEvent("Made a new friend.", "normal");
+                }
+            }
+
+            static handleDeath() {
+                this.stop();
+                UI.logEvent(`${state.person.name} has passed away at age ${state.person.age}.`, "critical");
+                
+                setTimeout(() => {
+                    // Inherit and reset
+                    state.generation++;
+                    const inheritance = Math.max(0, state.finances.money + state.finances.bank + state.finances.stocks - state.finances.debt);
+                    
+                    state.person = {
+                        id: Utils.uuid(),
+                        name: `Alpha Gen ${state.generation}`,
+                        age: 1,
+                        lifeStage: "Toddler",
+                        personality: PERSONALITY_TRAITS[Math.floor(Math.random() * PERSONALITY_TRAITS.length)],
+                        avatar: "👶",
+                        stats: { health: 100, energy: 100, stress: 0, mood: 100 },
+                        currentAction: "Sleeping",
+                        macroFocus: "rest"
+                    };
+
+                    state.finances = { money: 0, bank: inheritance, debt: 0, stocks: 0, income: 0, expenses: 10 };
+                    state.career = { title: "None", salary: 0, isEmployed: false, isStudent: false };
+                    state.relationships = [];
+                    state.flags = { hasPartner: false, hasKids: 0, isThinking: false };
+                    
+                    UI.logEvent(`Generation ${state.generation} begins. Inherited ${Utils.formatMoney(inheritance)}.`, "critical");
+                    StorageEngine.save();
+                    this.start();
+                }, 4000);
+            }
+        }
+
+        /******************************************************************
+         * INITIALIZATION & EVENT LISTENERS
+         ******************************************************************/
+        function initApp() {
+            UI.initCharts();
+            const hasSave = StorageEngine.load();
+
+            if(hasSave && state.apiKey) {
+                document.getElementById('save-found-msg').style.display = 'block';
+                document.getElementById('api-key-input').value = state.apiKey;
+            }
+
+            // Bind Setup Button
+            document.getElementById('start-btn').addEventListener('click', () => {
+                const key = document.getElementById('api-key-input').value.trim();
+                if(!key) { alert("Please enter OpenRouter API key"); return; }
+                state.apiKey = key;
+                
+                if(!state.person.personality) {
+                    state.person.personality = PERSONALITY_TRAITS[Math.floor(Math.random() * PERSONALITY_TRAITS.length)];
+                }
+
+                document.getElementById('setup-modal').style.display = 'none';
+                StorageEngine.save();
+                UI.updateAll();
+                SimulationEngine.start();
+            });
+
+            // Bind Manual Actions
+            const bindAction = (id, focus) => {
+                document.getElementById(id).addEventListener('click', () => {
+                    state.person.macroFocus = focus;
+                    UI.updateAll();
+                });
+            };
+            bindAction('btn-study', 'study');
+            bindAction('btn-work', 'work');
+            bindAction('btn-rest', 'rest');
+            bindAction('btn-invest', 'invest');
+            bindAction('btn-socialize', 'socialize');
+            bindAction('btn-health', 'health');
+
+            // Force AI
+            document.getElementById('force-ai-btn').addEventListener('click', async () => {
+                if(state.flags.isThinking) return;
+                const decision = await AI.requestDecision("User forced a life evaluation. What is your next move?");
+                AI.processDecision(decision);
+            });
+            
+            // Auto update UI in case simulation paused
+            setInterval(() => UI.drawCharts(), 1000);
+        }
+
+        window.onload = initApp;
+
+    </script>
 </body>
 </html>
