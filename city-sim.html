@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Life Simulator: Fast Generations</title>
+    <title>AI Life Simulator: 30s = 1 Year</title>
     <style>
         :root {
             --bg-base: #0f172a;
@@ -31,21 +31,28 @@
         .setup-card input { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--bg-card); background: var(--bg-base); color: white; outline: none; }
         .btn { padding: 10px 20px; background: var(--accent-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: var(--transition); }
         .btn:hover { background: #2563eb; }
-        .btn:disabled { background: var(--bg-card); cursor: not-allowed; }
 
-        /* Header */
-        header { padding: 15px 30px; background: var(--bg-panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--bg-card); }
+        /* Header & Year Progress */
+        header { padding: 15px 30px; background: var(--bg-panel); display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--bg-card); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; }
         .world-clock { display: flex; gap: 20px; font-size: 1.1rem; }
         .world-clock span { color: var(--accent-green); font-weight: bold; }
         .api-status { font-size: 0.9rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
         .indicator { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-yellow); }
         .indicator.active { background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+        
+        .year-progress-container { width: 100%; height: 6px; background: var(--bg-card); border-radius: 3px; overflow: hidden; position: relative; }
+        .year-progress-fill { height: 100%; background: var(--accent-blue); width: 0%; transition: width 1s linear; }
+        .year-label { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: var(--text-muted); }
 
         /* Main Layout */
-        main { display: grid; grid-template-columns: 300px 1fr 350px; gap: 20px; padding: 20px; height: calc(100vh - 65px); }
-        .panel { background: var(--bg-panel); border-radius: var(--border-radius); padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-        .panel::-webkit-scrollbar { width: 6px; }
-        .panel::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 10px; }
+        main { display: grid; grid-template-columns: 300px 1fr 350px; gap: 20px; padding: 20px; height: calc(100vh - 85px); }
+        .panel { background: var(--bg-panel); border-radius: var(--border-radius); padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: hidden; }
+        
+        /* Scrollbar styles */
+        .scrollable { overflow-y: auto; padding-right: 5px; }
+        .scrollable::-webkit-scrollbar { width: 6px; }
+        .scrollable::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 10px; }
 
         /* Profile & Stats */
         .profile-header { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--bg-card); padding-bottom: 15px; }
@@ -63,37 +70,34 @@
         .fill-stress { background: var(--accent-red); }
         .fill-mood { background: var(--accent-purple); }
 
-        /* Economy & Center */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .dash-card { background: var(--bg-card); padding: 15px; border-radius: 8px; text-align: center; }
-        .dash-card h4 { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; }
-        .dash-card p { font-size: 1.2rem; font-weight: bold; }
+        /* Center Panel: Chat & System Log */
+        .center-layout { display: grid; grid-template-rows: 60% 40%; gap: 15px; height: 100%; }
+        
+        /* AI Chat Box */
+        .chat-box { background: var(--bg-base); border: 1px solid var(--bg-card); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .chat-message { display: flex; flex-direction: column; gap: 5px; animation: slideIn 0.3s ease; }
+        .chat-bubble { background: var(--bg-panel); padding: 12px 15px; border-radius: 12px; border-bottom-left-radius: 2px; font-size: 0.95rem; line-height: 1.4; border: 1px solid rgba(139, 92, 246, 0.3); }
+        .chat-meta { font-size: 0.75rem; color: var(--accent-purple); font-weight: bold; margin-left: 5px; }
+
+        /* System Timeline */
+        .timeline-box { background: var(--bg-base); border: 1px solid var(--bg-card); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .event-card { background: var(--bg-card); padding: 10px; border-radius: 6px; font-size: 0.85rem; border-left: 3px solid var(--accent-blue); animation: slideIn 0.3s ease; }
+        .event-card.critical { border-left-color: var(--accent-red); background: rgba(239, 68, 68, 0.1); }
+        .event-time { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Right Panel: Finances & Economy */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .dash-card { background: var(--bg-card); padding: 12px; border-radius: 8px; text-align: center; }
+        .dash-card h4 { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; }
+        .dash-card p { font-size: 1.1rem; font-weight: bold; }
         .money-positive { color: var(--accent-green); }
         .money-negative { color: var(--accent-red); }
 
-        /* Timeline / Memory */
-        .timeline { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; }
-        .event-card { background: var(--bg-card); padding: 12px; border-radius: 8px; font-size: 0.9rem; border-left: 4px solid var(--accent-blue); animation: fadeIn 0.3s ease; }
-        .event-card.thought { border-left-color: var(--accent-purple); font-style: italic; }
-        .event-card.critical { border-left-color: var(--accent-red); background: rgba(239, 68, 68, 0.1); }
-        .event-time { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Right Panel: Actions & Charts */
-        .chart-container { background: var(--bg-card); padding: 10px; border-radius: 8px; height: 150px; display: flex; flex-direction: column; }
-        .chart-container h4 { font-size: 0.8rem; margin-bottom: 5px; color: var(--text-muted); }
-        canvas { width: 100%; height: 100%; }
-
-        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: auto; }
-        .action-btn { background: var(--bg-card); color: var(--text-main); border: 1px solid transparent; padding: 10px; border-radius: 6px; cursor: pointer; transition: var(--transition); font-size: 0.85rem; }
-        .action-btn:hover { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
-        .action-btn.active { background: var(--accent-blue); color: white; }
-
-        .relationship-list { display: flex; flex-direction: column; gap: 8px; }
-        .rel-item { background: var(--bg-card); padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
-        .rel-bar { width: 50px; height: 4px; background: var(--bg-base); border-radius: 2px; }
-        .rel-fill { height: 100%; background: var(--accent-red); border-radius: 2px; }
+        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
+        .action-btn { background: var(--bg-card); color: var(--text-main); border: 1px solid transparent; padding: 8px; border-radius: 6px; font-size: 0.8rem; pointer-events: none; }
+        .action-btn.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body>
@@ -101,114 +105,133 @@
     <div id="setup-modal">
         <div class="setup-card">
             <h2>AI Life Simulator</h2>
-            <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">Fast Mode: 1 Year = ~10 seconds.<br>Generational simulation driven by OpenRouter.</p>
+            <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">
+                <b>Tốc độ: 30 Giây = 1 Năm.</b><br>
+                Cứ đầu năm AI sẽ lập kế hoạch, và 30s tiếp theo kế hoạch sẽ chạy.
+            </p>
             <input type="password" id="api-key-input" placeholder="Enter OpenRouter API Key...">
-            <button class="btn" id="start-btn">Start Simulation</button>
-            <p id="save-found-msg" style="margin-top: 15px; font-size: 0.8rem; color: var(--accent-green); display: none;">Found existing save. Will continue simulation.</p>
+            <button class="btn" id="start-btn">Bắt Đầu Cuộc Đời</button>
+            <p id="save-found-msg" style="margin-top: 15px; font-size: 0.8rem; color: var(--accent-green); display: none;">Found existing save.</p>
         </div>
     </div>
 
     <header>
-        <div class="world-clock">
-            <div>Date: <span id="ui-date">Jan 1, 2024</span></div>
-            <div>Weather: <span id="ui-weather">Sunny</span></div>
+        <div class="header-top">
+            <div class="world-clock">
+                <div>Year: <span id="ui-year">2024</span></div>
+                <div>Weather: <span id="ui-weather">Sunny</span></div>
+            </div>
+            <div class="api-status">
+                Gen <span id="ui-generation" style="color:var(--accent-blue);font-weight:bold;">1</span>
+                | Trạng thái AI: <div class="indicator" id="ai-indicator"></div> <span id="ai-status-text">Đang Sống</span>
+            </div>
         </div>
-        <div class="api-status">
-            Generation <span id="ui-generation" style="color:var(--accent-blue);font-weight:bold;">1</span>
-            | AI Status: <div class="indicator" id="ai-indicator"></div> <span id="ai-status-text">Idle</span>
+        <div style="position: relative; margin-top: 10px;">
+            <div class="year-label" id="ui-year-timer">Năm nay: 0 / 30s</div>
+            <div class="year-progress-container">
+                <div class="year-progress-fill" id="bar-year"></div>
+            </div>
         </div>
     </header>
 
     <main>
         <!-- Left Panel: Profile -->
-        <div class="panel">
+        <div class="panel scrollable">
             <div class="profile-header">
                 <div class="avatar" id="ui-avatar">🧒</div>
                 <div class="profile-info">
                     <h3 id="ui-name">AI Entity</h3>
-                    <p>Age: <span id="ui-age">1</span> (<span id="ui-stage">Toddler</span>)</p>
+                    <p>Tuổi: <span id="ui-age">1</span> (<span id="ui-stage">Toddler</span>)</p>
                 </div>
             </div>
 
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">
-                <strong>Personality:</strong> <span id="ui-personality">Generating...</span>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">
+                <strong>Tính cách:</strong> <span id="ui-personality">Generating...</span>
             </div>
 
-            <h4>Vitals</h4>
+            <h4 style="margin-top: 10px;">Chỉ số sống (Cập nhật liên tục)</h4>
             <div class="stat-group">
-                <div class="stat-label"><span>Health</span> <span id="ui-val-health">100%</span></div>
+                <div class="stat-label"><span>Sức Khỏe</span> <span id="ui-val-health">100%</span></div>
                 <div class="progress-bar"><div class="progress-fill fill-health" id="bar-health" style="width: 100%"></div></div>
             </div>
             <div class="stat-group">
-                <div class="stat-label"><span>Energy</span> <span id="ui-val-energy">100%</span></div>
+                <div class="stat-label"><span>Năng Lượng</span> <span id="ui-val-energy">100%</span></div>
                 <div class="progress-bar"><div class="progress-fill fill-energy" id="bar-energy" style="width: 100%"></div></div>
             </div>
             <div class="stat-group">
-                <div class="stat-label"><span>Stress</span> <span id="ui-val-stress">0%</span></div>
+                <div class="stat-label"><span>Căng Thẳng</span> <span id="ui-val-stress">0%</span></div>
                 <div class="progress-bar"><div class="progress-fill fill-stress" id="bar-stress" style="width: 0%"></div></div>
             </div>
             <div class="stat-group">
-                <div class="stat-label"><span>Mood</span> <span id="ui-val-mood">100%</span></div>
+                <div class="stat-label"><span>Tâm Trạng</span> <span id="ui-val-mood">100%</span></div>
                 <div class="progress-bar"><div class="progress-fill fill-mood" id="bar-mood" style="width: 100%"></div></div>
             </div>
 
-            <h4 style="margin-top: 15px;">Relationships</h4>
-            <div class="relationship-list" id="ui-relationships"></div>
+            <h4 style="margin-top: 15px;">Các mối quan hệ</h4>
+            <div id="ui-relationships" style="display:flex; flex-direction:column; gap:5px; font-size:0.85rem;"></div>
         </div>
 
-        <!-- Center Panel: Finances, State, & Timeline -->
-        <div class="panel">
+        <!-- Center Panel: AI Thoughts & System Events -->
+        <div class="center-layout">
+            <!-- AI Mind Chat -->
+            <div class="panel" style="padding: 0;">
+                <h4 style="padding: 15px 15px 5px 15px; color: var(--accent-purple); border-bottom: 1px solid var(--bg-card);">🧠 Kế Hoạch & Quyết Định của AI</h4>
+                <div class="chat-box scrollable" id="ui-ai-chat" style="flex: 1; border: none; border-radius: 0;">
+                    <!-- Chat bubbles go here -->
+                </div>
+            </div>
+
+            <!-- System Timeline -->
+            <div class="panel" style="padding: 0;">
+                <h4 style="padding: 15px 15px 5px 15px; border-bottom: 1px solid var(--bg-card);">📜 Sự Kiện Cuộc Đời (Hệ Thống)</h4>
+                <div class="timeline-box scrollable" id="ui-timeline" style="flex: 1; border: none; border-radius: 0;">
+                    <!-- System events go here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Data, Economy -->
+        <div class="panel scrollable">
+            <h4>Tài Chính (Biến động theo giây)</h4>
             <div class="dashboard-grid">
                 <div class="dash-card">
-                    <h4>Bank Balance</h4>
+                    <h4>Tiền Mặt & Ngân Hàng</h4>
                     <p id="ui-money" class="money-positive">$0</p>
                 </div>
                 <div class="dash-card">
-                    <h4>Debt</h4>
+                    <h4>Nợ</h4>
                     <p id="ui-debt" class="money-negative">$0</p>
                 </div>
                 <div class="dash-card">
-                    <h4>Current Action</h4>
-                    <p id="ui-current-action" style="color:var(--accent-blue);">Playing</p>
+                    <h4>Lương (Năm)</h4>
+                    <p id="ui-salary" class="money-positive">$0</p>
                 </div>
                 <div class="dash-card">
-                    <h4>Career / School</h4>
-                    <p id="ui-career">None</p>
+                    <h4>Học / Làm việc</h4>
+                    <p id="ui-career" style="font-size: 0.9rem;">None</p>
                 </div>
             </div>
 
-            <h4 style="margin-top: 10px;">Life Timeline & Thoughts</h4>
-            <div class="timeline" id="ui-timeline"></div>
-        </div>
-
-        <!-- Right Panel: Data, Economy & Manual Override -->
-        <div class="panel">
-            <h4>Economy & Market</h4>
-            <div class="stat-label"><span>Inflation Rate:</span> <span id="ui-inflation">2.0%</span></div>
-            <div class="stat-label"><span>Stock Market:</span> <span id="ui-market" style="color:var(--accent-green);">Bull</span></div>
-            
-            <div class="chart-container" style="margin-top: 15px;">
-                <h4>Net Worth History</h4>
-                <canvas id="chart-networth"></canvas>
+            <h4 style="margin-top: 15px;">Kinh tế vĩ mô</h4>
+            <div style="font-size: 0.85rem; display: flex; justify-content: space-between;">
+                <span>Lạm phát:</span> <span id="ui-inflation">2.0%</span>
+            </div>
+            <div style="font-size: 0.85rem; display: flex; justify-content: space-between; margin-bottom: 15px;">
+                <span>Thị trường chứng khoán:</span> <span id="ui-market" style="color:var(--accent-green);">Tăng Trưởng (Bull)</span>
             </div>
 
-            <div class="chart-container" style="margin-top: 10px;">
-                <h4>Health History</h4>
-                <canvas id="chart-health"></canvas>
-            </div>
-
-            <h4 style="margin-top: 15px;">AI Focus & States</h4>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom: 10px;">The AI decides its macro state naturally.</p>
+            <h4>Hoạt Động Hiện Tại Của AI</h4>
             <div class="actions-grid">
-                <button class="action-btn" id="btn-study">Study</button>
-                <button class="action-btn" id="btn-work">Work</button>
-                <button class="action-btn" id="btn-rest">Rest / Sleep</button>
-                <button class="action-btn" id="btn-invest">Invest</button>
-                <button class="action-btn" id="btn-socialize">Socialize</button>
-                <button class="action-btn" id="btn-health">Health/Gym</button>
+                <div class="action-btn" id="btn-study">Học Tập</div>
+                <div class="action-btn" id="btn-work">Làm Việc</div>
+                <div class="action-btn" id="btn-rest">Nghỉ Ngơi</div>
+                <div class="action-btn" id="btn-invest">Đầu Tư</div>
+                <div class="action-btn" id="btn-socialize">Xã Giao</div>
+                <div class="action-btn" id="btn-health">Tập Thể Dục</div>
             </div>
-            
-            <button class="btn" id="force-ai-btn" style="margin-top:15px; width:100%; background:var(--bg-card); color:var(--text-main);">Force AI Decision Now</button>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px; text-align: center;">
+                *Các nút này chỉ để hiển thị Trạng Thái AI đang chọn, bạn không thể bấm.
+            </p>
         </div>
     </main>
 
@@ -219,95 +242,70 @@
         const CONSTANTS = {
             API_URL: "https://openrouter.ai/api/v1/chat/completions",
             MODEL: "google/gemma-4-31b-it:free", 
-            TICK_RATE: 25, // 25ms = 1 Day. ~9 giây = 1 Năm.
-            DAYS_PER_MONTH: 30,
-            MONTHS_PER_YEAR: 12,
-            MAX_AGE: 100,
+            TICK_RATE: 1000, // 1 Tick = 1 Giây thực tế
+            SECONDS_PER_YEAR: 30, // 30 giây = 1 Năm trong game
             START_YEAR: 2024,
-            SAVE_KEY: "ai_life_sim_save_fast_v2",
-            // Các cột mốc tuổi tự động gọi AI quyết định để tiết kiệm API
-            AI_MILESTONES: [12, 15, 18, 22, 26, 30, 35, 40, 50, 60, 70, 80]
+            SAVE_KEY: "ai_life_sim_30s_v1"
         };
 
         const Utils = {
             formatMoney: (num) => `$${Math.round(num).toLocaleString()}`,
-            randomRange: (min, max) => Math.random() * (max - min) + min,
             randomInt: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
             uuid: () => Math.random().toString(36).substring(2, 9),
             clamp: (val, min, max) => Math.max(min, Math.min(max, val))
         };
 
         /******************************************************************
-         * GAME STATE (Persisted via LocalStorage)
+         * GAME STATE
          ******************************************************************/
         let state = {
             apiKey: "",
             generation: 1,
-            time: { year: CONSTANTS.START_YEAR, month: 1, day: 1 },
-            world: { weather: "Sunny", inflation: 2.0, market: 100, marketTrend: "Bull" },
+            time: { year: CONSTANTS.START_YEAR, yearProgress: 0 },
+            world: { weather: "Nắng", inflation: 2.0, marketTrend: "Bull" },
             person: {
-                id: Utils.uuid(), name: "Alpha", age: 1, lifeStage: "Toddler", personality: "", avatar: "👶",
+                name: "Alpha", age: 1, lifeStage: "Sơ sinh", personality: "", avatar: "👶",
                 stats: { health: 100, energy: 100, stress: 0, mood: 100 },
-                currentAction: "Playing", macroFocus: "rest"
+                macroFocus: "rest" // rest, study, work, invest, socialize, health
             },
-            finances: { money: 0, bank: 0, debt: 0, stocks: 0, income: 0, expenses: 10 },
-            career: { title: "None", salary: 0, isEmployed: false, isStudent: false },
+            finances: { money: 0, bank: 0, debt: 0, stocks: 0, yearlySalary: 0, yearlyExpenses: 2000 },
+            career: { title: "Không có", isEmployed: false, isStudent: false },
             relationships: [],
-            history: { netWorth: [], health: [] },
-            memory: [],
             flags: { hasPartner: false, hasKids: 0, isThinking: false }
         };
 
         const CAREERS = [
-            { title: "Fast Food Worker", salary: 1800, stress: 30 },
-            { title: "Retail Associate", salary: 2000, stress: 35 },
-            { title: "Office Clerk", salary: 3000, stress: 25 },
-            { title: "Junior Developer", salary: 5000, stress: 50 },
-            { title: "Senior Developer", salary: 9000, stress: 65 },
-            { title: "Manager", salary: 7000, stress: 70 },
-            { title: "CEO", salary: 25000, stress: 90 }
+            { title: "Phục Vụ Bàn", salary: 15000, stress: 30 },
+            { title: "Nhân Viên Bán Hàng", salary: 20000, stress: 35 },
+            { title: "Nhân Viên Văn Phòng", salary: 35000, stress: 25 },
+            { title: "Lập Trình Viên Junior", salary: 60000, stress: 50 },
+            { title: "Lập Trình Viên Senior", salary: 120000, stress: 65 },
+            { title: "Quản Lý", salary: 90000, stress: 70 },
+            { title: "Giám Đốc (CEO)", salary: 300000, stress: 90 }
         ];
 
         const PERSONALITY_TRAITS = [
-            "Introvert, Frugal, Conservative", "Extrovert, Impulsive, Risk-Taker",
-            "Ambitious, Career-oriented, Stressed", "Relaxed, Family-oriented, Optimistic",
-            "Creative, Disorganized, Generous", "Analytical, Pessimistic, Patient"
+            "Hướng nội, Tiết kiệm, An Toàn", "Hướng ngoại, Bốc đồng, Thích rủi ro",
+            "Tham vọng, Tập trung sự nghiệp, Dễ căng thẳng", "Thoải mái, Hướng về gia đình, Lạc quan",
+            "Sáng tạo, Lộn xộn, Hào phóng", "Phân tích, Bi quan, Kiên nhẫn"
         ];
 
         /******************************************************************
-         * CORE ENGINES
+         * UI CONTROLLER
          ******************************************************************/
-        
-        class StorageEngine {
-            static save() {
-                if(!state.apiKey) return;
-                localStorage.setItem(CONSTANTS.SAVE_KEY, JSON.stringify(state));
-            }
-            static load() {
-                const data = localStorage.getItem(CONSTANTS.SAVE_KEY);
-                if(data) {
-                    try { state = { ...state, ...JSON.parse(data) }; return true; } 
-                    catch(e) {}
-                }
-                return false;
-            }
-        }
-
         class UI {
             static get(id) { return document.getElementById(id); }
-            
-            static initCharts() {
-                this.nwCanvas = this.get('chart-networth').getContext('2d');
-                this.healthCanvas = this.get('chart-health').getContext('2d');
-            }
 
             static updateAll() {
-                const m = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-                this.get('ui-date').innerText = `${m[state.time.month-1]} ${state.time.day}, ${state.time.year}`;
+                this.get('ui-year').innerText = state.time.year;
                 this.get('ui-weather').innerText = state.world.weather;
                 this.get('ui-generation').innerText = state.generation;
                 
-                this.get('ai-status-text').innerText = state.flags.isThinking ? "Thinking..." : "Living";
+                // Progress Bar (30s)
+                this.get('ui-year-timer').innerText = `Năm nay: ${state.time.yearProgress} / 30s`;
+                this.get('bar-year').style.width = `${(state.time.yearProgress / CONSTANTS.SECONDS_PER_YEAR) * 100}%`;
+
+                this.get('ai-status-text').innerText = state.flags.isThinking ? "Đang Suy Nghĩ Kế Hoạch..." : "Đang Thực Hiện Kế Hoạch";
                 this.get('ai-indicator').className = `indicator ${state.flags.isThinking ? 'active' : ''}`;
 
                 this.get('ui-name').innerText = state.person.name;
@@ -317,111 +315,79 @@
                 this.get('ui-personality').innerText = state.person.personality;
                 
                 const s = state.person.stats;
-                this.get('ui-val-health').innerText = Math.round(s.health) + "%";
-                this.get('bar-health').style.width = s.health + "%";
-                this.get('ui-val-energy').innerText = Math.round(s.energy) + "%";
-                this.get('bar-energy').style.width = s.energy + "%";
-                this.get('ui-val-stress').innerText = Math.round(s.stress) + "%";
-                this.get('bar-stress').style.width = s.stress + "%";
-                this.get('ui-val-mood').innerText = Math.round(s.mood) + "%";
-                this.get('bar-mood').style.width = s.mood + "%";
+                this.get('ui-val-health').innerText = Math.round(s.health) + "%"; this.get('bar-health').style.width = s.health + "%";
+                this.get('ui-val-energy').innerText = Math.round(s.energy) + "%"; this.get('bar-energy').style.width = s.energy + "%";
+                this.get('ui-val-stress').innerText = Math.round(s.stress) + "%"; this.get('bar-stress').style.width = s.stress + "%";
+                this.get('ui-val-mood').innerText = Math.round(s.mood) + "%"; this.get('bar-mood').style.width = s.mood + "%";
 
                 this.get('ui-money').innerText = Utils.formatMoney(state.finances.money + state.finances.bank);
                 this.get('ui-debt').innerText = Utils.formatMoney(state.finances.debt);
-                this.get('ui-current-action').innerText = state.person.currentAction;
-                this.get('ui-career').innerText = state.career.isStudent ? "University Student" : (state.career.isEmployed ? state.career.title : "Unemployed");
+                this.get('ui-salary').innerText = Utils.formatMoney(state.finances.yearlySalary);
+                this.get('ui-career').innerText = state.career.isStudent ? "Sinh Viên Đại Học" : (state.career.isEmployed ? state.career.title : "Thất nghiệp");
+                this.get('ui-market').innerText = state.world.marketTrend === "Bull" ? "Tăng (Bull)" : "Giảm (Bear)";
 
-                this.get('ui-inflation').innerText = state.world.inflation.toFixed(1) + "%";
-                this.get('ui-market').innerText = state.world.marketTrend;
-
+                // Highlight Action
                 document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('active'));
                 const btnMap = { "study": "btn-study", "work": "btn-work", "rest": "btn-rest", "invest": "btn-invest", "socialize": "btn-socialize", "health": "btn-health" };
                 if(btnMap[state.person.macroFocus]) this.get(btnMap[state.person.macroFocus]).classList.add('active');
 
+                // Mối quan hệ
                 const relContainer = this.get('ui-relationships');
                 relContainer.innerHTML = '';
-                if(state.relationships.length === 0) relContainer.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem;">No close relationships.</span>';
+                if(state.relationships.length === 0) relContainer.innerHTML = '<span style="color:var(--text-muted);">Chưa có.</span>';
                 state.relationships.forEach(rel => {
                     relContainer.innerHTML += `
-                        <div class="rel-item">
+                        <div style="background:var(--bg-card); padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
                             <span>${rel.name} (${rel.type})</span>
-                            <div class="rel-bar"><div class="rel-fill" style="width: ${rel.trust}%"></div></div>
+                            <span style="color:var(--accent-red);">Tim: ${Math.round(rel.trust)}%</span>
                         </div>`;
                 });
-
-                // Tối ưu hoá không vẽ chart mỗi tick để giảm lag
-                if(state.time.day % 10 === 0) this.drawCharts();
             }
 
-            static logEvent(text, type = "normal") {
+            static logSystemEvent(text, type = "normal") {
                 const container = this.get('ui-timeline');
                 const div = document.createElement('div');
                 div.className = `event-card ${type}`;
-                const timeStr = `Age ${state.person.age} - Y${state.time.year} M${state.time.month}`;
-                div.innerHTML = `<div class="event-time">${timeStr}</div>${text}`;
-                container.prepend(div);
-                
-                state.memory.unshift({ time: timeStr, text: text, type: type });
-                if(state.memory.length > 50) state.memory.pop();
-                
-                if(container.children.length > 30) container.removeChild(container.lastChild);
+                div.innerHTML = `<div class="event-time">Tuổi ${state.person.age} (Năm ${state.time.year})</div>${text}`;
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight;
             }
 
-            static drawCharts() {
-                const drawLine = (ctx, data, color) => {
-                    const canvas = ctx.canvas;
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    if(data.length < 2) return;
-                    
-                    const max = Math.max(...data) || 1;
-                    const min = Math.min(...data, 0);
-                    const range = max - min;
-                    
-                    ctx.beginPath();
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = 2;
-                    
-                    const step = canvas.width / (data.length - 1);
-                    data.forEach((val, i) => {
-                        const x = i * step;
-                        const y = canvas.height - ((val - min) / (range || 1)) * canvas.height;
-                        if(i === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
-                    });
-                    ctx.stroke();
-                };
-
-                const nwC = this.get('chart-networth');
-                const hlC = this.get('chart-health');
-                nwC.width = nwC.parentElement.clientWidth - 20;
-                hlC.width = hlC.parentElement.clientWidth - 20;
-                nwC.height = 100;
-                hlC.height = 100;
-
-                drawLine(this.nwCanvas, state.history.netWorth, '#10b981');
-                drawLine(this.healthCanvas, state.history.health, '#ef4444');
+            static logAIChat(thought) {
+                const container = this.get('ui-ai-chat');
+                const div = document.createElement('div');
+                div.className = 'chat-message';
+                div.innerHTML = `
+                    <div class="chat-meta">Tuổi ${state.person.age} (Năm ${state.time.year})</div>
+                    <div class="chat-bubble">"${thought}"</div>
+                `;
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight; // Auto scroll to bottom
             }
         }
 
+        /******************************************************************
+         * AI ENGINE
+         ******************************************************************/
         class AI {
-            static async requestDecision(contextPrompt) {
-                if(state.flags.isThinking || !state.apiKey) return null;
+            static async requestYearlyPlan() {
+                if(!state.apiKey) return null;
                 state.flags.isThinking = true;
                 UI.updateAll();
 
-                const systemPrompt = `You are playing a Life Simulation game. You are roleplaying as ${state.person.name}, a ${state.person.age}-year-old ${state.person.lifeStage}.
-Your personality: ${state.person.personality}.
-Stats: Health: ${Math.round(state.person.stats.health)}/100, Energy: ${Math.round(state.person.stats.energy)}/100, Stress: ${Math.round(state.person.stats.stress)}/100.
-Financial: Cash $${Math.round(state.finances.money)}, Bank $${Math.round(state.finances.bank)}, Debt $${Math.round(state.finances.debt)}.
-Employment: ${state.career.isEmployed ? state.career.title : "Unemployed"}.
+                const systemPrompt = `Bạn đang chơi game Mô Phỏng Cuộc Đời. Đóng vai: ${state.person.name}, Tuổi: ${state.person.age} (${state.person.lifeStage}).
+Tính cách của bạn: ${state.person.personality}.
+Sức khỏe: ${Math.round(state.person.stats.health)}/100, Căng thẳng: ${Math.round(state.person.stats.stress)}/100.
+Tài sản: Tiền $${Math.round(state.finances.money + state.finances.bank)}, Nợ $${Math.round(state.finances.debt)}.
+Nghề nghiệp: ${state.career.isEmployed ? state.career.title : "Thất nghiệp"}. Lương năm: $${state.finances.yearlySalary}.
 
-Make a strategic life decision for the upcoming years.
-Choose ONE macro_focus from: "study", "work", "rest", "invest", "socialize", "health".
-Choose ONE major_action if appropriate (e.g., "apply_job", "quit_job", "university", "propose", "have_child", "buy_house", "none").
+Bây giờ là đầu năm mới. Hãy lên kế hoạch cho cả năm nay. (Bạn có đúng 1 năm để thực hiện kế hoạch này).
+Chọn MỘT 'macro_focus' (trọng tâm năm nay) từ danh sách: "study", "work", "rest", "invest", "socialize", "health".
+Chọn MỘT 'major_action' (hành động lớn) nếu đủ tuổi/tiền: "apply_job", "quit_job", "university", "propose", "have_child", "none". (Chỉ chọn 1, hoặc "none").
 
-Respond ONLY in pure JSON format:
+Trả về CHỈ ĐỊNH DẠNG JSON hợp lệ:
 {
-    "thought": "Internal monologue explaining choice based on your stats/age.",
+    "thought": "Viết dòng suy nghĩ của bạn BẰNG TIẾNG VIỆT giống như đang tự nhủ. Giải thích lý do chọn kế hoạch này dựa trên tuổi, tiền và sức khỏe hiện tại.",
     "macro_focus": "chosen_focus",
     "major_action": "chosen_action"
 }`;
@@ -434,9 +400,9 @@ Respond ONLY in pure JSON format:
                             model: CONSTANTS.MODEL,
                             messages: [
                                 { role: "system", content: systemPrompt },
-                                { role: "user", content: `Context: ${contextPrompt}\nMake your choice.` }
+                                { role: "user", content: "Hãy đưa ra quyết định cho năm nay." }
                             ],
-                            temperature: 0.7
+                            temperature: 0.8
                         })
                     });
 
@@ -447,7 +413,7 @@ Respond ONLY in pure JSON format:
                     state.flags.isThinking = false;
                     return parsed;
                 } catch (error) {
-                    console.error("AI API Error:", error);
+                    console.error("Lỗi AI API:", error);
                     state.flags.isThinking = false;
                     UI.updateAll();
                     return null;
@@ -455,240 +421,217 @@ Respond ONLY in pure JSON format:
             }
 
             static processDecision(decision) {
-                if(!decision) return;
-                
-                if(decision.thought) UI.logEvent(`"${decision.thought}"`, "thought");
-                if(decision.macro_focus && ["study", "work", "rest", "invest", "socialize", "health"].includes(decision.macro_focus)) {
-                    state.person.macroFocus = decision.macro_focus;
+                if(!decision) {
+                    UI.logSystemEvent("AI không phản hồi. Tiếp tục kế hoạch cũ.", "critical");
+                    return;
                 }
+                
+                // In suy nghĩ ra khung Chat
+                if(decision.thought) UI.logAIChat(decision.thought);
+                
+                // Đặt focus cho 30s tiếp theo
+                if(decision.macro_focus) state.person.macroFocus = decision.macro_focus;
 
+                // Xử lý Hành động lớn (Instant Action)
                 const action = decision.major_action;
                 if(action === "apply_job" && state.person.age >= 16 && !state.career.isEmployed) {
                     const job = CAREERS[Utils.randomInt(0, Math.min(CAREERS.length-1, Math.floor(state.person.age/10)))];
                     state.career.isEmployed = true;
-                    state.career.title = job.title; state.career.salary = job.salary; state.career.isStudent = false;
-                    UI.logEvent(`Got a new job as a ${job.title}!`);
+                    state.career.title = job.title; 
+                    state.finances.yearlySalary = job.salary; 
+                    state.career.isStudent = false;
+                    UI.logSystemEvent(`Đã xin việc thành công: ${job.title}! Lương $${job.salary}/năm.`);
                 } else if(action === "quit_job" && state.career.isEmployed) {
-                    state.career.isEmployed = false; state.career.title = "None"; state.career.salary = 0;
-                    UI.logEvent("Quit my job.");
+                    state.career.isEmployed = false; state.career.title = "Không có"; state.finances.yearlySalary = 0;
+                    UI.logSystemEvent("Đã nộp đơn xin nghỉ việc.");
                 } else if(action === "university" && state.person.age >= 18 && !state.career.isStudent) {
-                    if(state.finances.money + state.finances.bank > 10000) {
-                        state.finances.money -= 10000; state.career.isStudent = true;
-                        UI.logEvent("Enrolled in University paid with cash.");
+                    if(state.finances.money + state.finances.bank > 30000) {
+                        state.finances.money -= 30000; state.career.isStudent = true;
+                        UI.logSystemEvent("Đăng ký vào Đại Học (Đóng học phí bằng tiền mặt).");
                     } else {
-                        state.finances.debt += 15000; state.career.isStudent = true;
-                        UI.logEvent("Took out a student loan to attend University.");
+                        state.finances.debt += 40000; state.career.isStudent = true;
+                        UI.logSystemEvent("Vay tín dụng sinh viên ($40,000) để học Đại Học.");
                     }
                 } else if(action === "propose" && state.person.age >= 18 && !state.flags.hasPartner) {
                     state.flags.hasPartner = true;
-                    UI.logEvent("Got married! 🎉", "critical");
-                    state.relationships.push({ name: `Partner ${Utils.uuid().substring(0,4)}`, type: "Spouse", trust: 100 });
-                } else if(action === "have_child" && state.flags.hasPartner) {
-                    state.flags.hasKids++; state.finances.expenses += 500;
-                    UI.logEvent(`Had a child! (Total kids: ${state.flags.hasKids}) 👶`, "critical");
-                    state.relationships.push({ name: `Child ${state.flags.hasKids}`, type: "Child", trust: 100 });
+                    UI.logSystemEvent("Đã cầu hôn và kết hôn! 💍 🎉", "critical");
+                    state.relationships.push({ name: `Vợ/Chồng`, type: "Spouse", trust: 100 });
+                } else if(action === "have_child" && state.flags.hasPartner && state.person.age > 20) {
+                    state.flags.hasKids++; state.finances.yearlyExpenses += 5000; // Con cái tốn 5k 1 năm
+                    UI.logSystemEvent(`Vợ chồng vừa sinh em bé! (Tổng số con: ${state.flags.hasKids}) 👶`, "critical");
+                    state.relationships.push({ name: `Con thứ ${state.flags.hasKids}`, type: "Child", trust: 100 });
                 }
             }
         }
 
+        /******************************************************************
+         * SIMULATION ENGINE (30s = 1 Year)
+         ******************************************************************/
         class SimulationEngine {
             static start() {
                 if(this.interval) clearInterval(this.interval);
-                this.interval = setInterval(() => this.tick(), CONSTANTS.TICK_RATE);
-                UI.logEvent("Simulation started.");
+                this.interval = setInterval(() => this.tick(), CONSTANTS.TICK_RATE); // 1s / tick
+                UI.logSystemEvent("Mô phỏng bắt đầu.");
+                this.triggerNewYear(); // Hỏi AI ngay đầu năm 1
             }
+
             static stop() { clearInterval(this.interval); }
 
             static async tick() {
-                if(state.flags.isThinking) return; 
+                if(state.flags.isThinking) return; // Time freezes while AI thinks
 
-                // Advance 1 Day per Tick
-                state.time.day++;
-                this.dailyUpdate();
+                state.time.yearProgress++;
 
-                if(state.time.day > CONSTANTS.DAYS_PER_MONTH) {
-                    state.time.day = 1;
-                    state.time.month++;
-                    this.monthlyUpdate();
-                }
+                // -- Áp dụng các thay đổi nhỏ mỗi giây (chia đều cho 30s của 1 năm) --
+                this.applySecondFraction();
 
-                if(state.time.month > CONSTANTS.MONTHS_PER_YEAR) {
-                    state.time.month = 1;
+                UI.updateAll();
+
+                // Hết 30 giây -> Sang năm mới
+                if(state.time.yearProgress >= CONSTANTS.SECONDS_PER_YEAR) {
+                    state.time.yearProgress = 0;
                     state.time.year++;
-                    await this.yearlyUpdate();
+                    state.person.age++;
+                    await this.triggerNewYear();
                 }
-
-                // Update UI visually
-                if(state.time.day % 2 === 0) UI.updateAll(); 
             }
 
-            static dailyUpdate() {
-                const p = state.person;
-                const s = p.stats;
-                
-                // Fast Daily Math (net changes per day including sleep)
-                if(p.age < 4) {
-                    p.currentAction = "Playing / Growing";
-                    s.health += 0.1;
-                } else if(p.age >= 4 && p.age < 18) {
-                    p.currentAction = "At School";
-                    s.stress += 0.5;
+            // Logic tính theo giây (1/30 của năm)
+            static applySecondFraction() {
+                const s = state.person.stats;
+                const f = state.finances;
+
+                // Tài chính: Lương và chi phí rải đều trong 30 giây
+                if(state.career.isEmployed) f.money += (f.yearlySalary / 30);
+                let livingCost = state.person.age >= 18 ? 15000 : 0; // Tốn 15k 1 năm để sống
+                f.money -= ((livingCost + f.yearlyExpenses) / 30);
+
+                // Lãi nợ rải đều (Nợ tăng 10% 1 năm)
+                if(f.debt > 0) {
+                    f.debt += (f.debt * 0.10) / 30;
+                    if(f.money > 0) { // Tự động trả nợ nếu có tiền mặt dư
+                        const repay = Math.min(f.money, (f.debt * 0.2)/30); 
+                        f.money -= repay; f.debt -= repay;
+                    }
+                } else if(f.money < 0) {
+                    f.debt += Math.abs(f.money); f.money = 0; // Phá sản tạm thời, chuyển thành nợ
+                }
+
+                // Sức khoẻ / Căng thẳng thay đổi mượt mà tuỳ Focus
+                if(state.person.age < 4) {
+                    s.health += (5 / 30); // Tự lớn lên
+                } else if(state.person.age >= 4 && state.person.age < 18) {
+                    s.stress += (10 / 30); // Đi học phổ thông
                 } else {
-                    switch(p.macroFocus) {
-                        case "work":
-                            p.currentAction = state.career.isEmployed ? "Working Hard" : "Job Hunting";
-                            s.stress += 1.5; s.mood -= 0.5;
-                            break;
-                        case "study":
-                            p.currentAction = state.career.isStudent ? "University Classes" : "Self-studying";
-                            s.stress += 1.0;
-                            break;
-                        case "rest":
-                            p.currentAction = "Resting / Chilling";
-                            s.stress -= 2.0; s.mood += 1.0; s.health += 0.1;
-                            break;
-                        case "health":
-                            p.currentAction = "Focusing on Fitness";
-                            s.health += 0.3; s.stress -= 1.0;
-                            break;
-                        case "socialize":
-                            p.currentAction = "Hanging out";
-                            s.mood += 2.0; s.stress -= 0.5;
-                            break;
-                        case "invest":
-                            p.currentAction = "Analyzing Markets";
-                            s.stress += 0.5;
-                            break;
+                    switch(state.person.macroFocus) {
+                        case "work": s.stress += (20/30); s.mood -= (10/30); break;
+                        case "study": s.stress += (15/30); break;
+                        case "rest": s.stress -= (30/30); s.health += (10/30); s.mood += (20/30); break;
+                        case "health": s.health += (20/30); s.stress -= (10/30); break;
+                        case "socialize": s.mood += (30/30); s.stress -= (5/30); break;
+                        case "invest": s.stress += (5/30); break;
                     }
                 }
 
-                // Balance stats
-                if(s.stress > 80) s.health -= 0.2;
-                if(s.stress < 20) s.health += 0.1;
+                // Cân bằng
+                if(s.stress > 85) s.health -= (10/30);
+                if(s.stress < 20) s.health += (5/30);
+                if(state.person.age > 45) s.health -= ((state.person.age - 40) * 1.5) / 30; // Già đi thì tụt máu tự nhiên
                 
                 s.health = Utils.clamp(s.health, 0, 100);
-                s.energy = 100; // Energy is abstracted in fast mode since sleep is instant
+                s.energy = 100; // Energy ko quan trọng trong mode 30s
                 s.stress = Utils.clamp(s.stress, 0, 100);
                 s.mood = Utils.clamp(s.mood, 0, 100);
 
                 if(s.health <= 0) this.handleDeath();
             }
 
-            static monthlyUpdate() {
-                const f = state.finances;
-                
-                // Income & Expenses
-                if(state.career.isEmployed) f.money += state.career.salary;
-                let livingCost = state.person.age >= 18 ? 1500 : 0;
-                f.money -= (livingCost + f.expenses);
-
-                // Debt
-                if(f.debt > 0) {
-                    f.debt *= 1.05;
-                    if(f.money > 0) { 
-                        const repay = Math.min(f.money, f.debt * 0.1);
-                        f.money -= repay; f.debt -= repay;
-                    }
-                } else if(f.money < 0) {
-                    f.debt += Math.abs(f.money); f.money = 0;
-                }
-
-                f.bank *= 1.002;
-                
-                // Stocks
-                f.stocks *= (state.world.marketTrend === "Bull") ? Utils.randomRange(1.0, 1.05) : Utils.randomRange(0.9, 1.02);
-                if(state.person.macroFocus === "invest" && f.money > 500) { f.money -= 500; f.stocks += 500; }
-
-                if(Math.random() < 0.02) this.generateRandomEvent();
-            }
-
-            static async yearlyUpdate() {
-                state.person.age++;
-                
-                if(state.person.age > 40) state.person.stats.health -= (state.person.age - 40) * 0.5; 
+            // Giao thừa: AI lên kế hoạch
+            static async triggerNewYear() {
+                // Cập nhật Life Stage
+                if(state.person.age === 4) { state.person.lifeStage = "Trẻ em"; state.person.avatar = "👦"; }
+                if(state.person.age === 13) { state.person.lifeStage = "Tuổi Teen"; state.person.avatar = "🧑"; }
+                if(state.person.age === 18) { state.person.lifeStage = "Thanh niên"; state.person.avatar = "👨"; }
+                if(state.person.age === 40) { state.person.lifeStage = "Trung niên"; }
+                if(state.person.age === 65) { state.person.lifeStage = "Người già"; state.person.avatar = "👴"; UI.logSystemEvent("Đã đến tuổi nghỉ hưu."); }
                 
                 if(state.person.age === 100) { this.handleDeath(); return; }
 
-                // Stages
-                if(state.person.age === 4) { state.person.lifeStage = "Child"; state.person.avatar = "👦"; }
-                if(state.person.age === 13) { state.person.lifeStage = "Teenager"; state.person.avatar = "🧑"; }
-                if(state.person.age === 18) { state.person.lifeStage = "Young Adult"; state.person.avatar = "👨"; }
-                if(state.person.age === 40) { state.person.lifeStage = "Adult"; }
-                if(state.person.age === 65) { state.person.lifeStage = "Senior"; state.person.avatar = "👴"; UI.logEvent("Reached retirement age."); }
+                UI.logSystemEvent(`🎉 Chúc mừng sinh nhật Tuổi ${state.person.age}!`);
 
-                // Data for charts
-                const nw = state.finances.money + state.finances.bank + state.finances.stocks - state.finances.debt;
-                state.history.netWorth.push(nw); if(state.history.netWorth.length > 50) state.history.netWorth.shift();
-                state.history.health.push(state.person.stats.health); if(state.history.health.length > 50) state.history.health.shift();
+                // Sinh random event (30% chance)
+                if(Math.random() < 0.3) this.generateRandomEvent();
 
-                UI.logEvent(`Happy Birthday! Turned ${state.person.age}.`);
-                StorageEngine.save();
+                // Lưu Game
+                if(state.apiKey) localStorage.setItem(CONSTANTS.SAVE_KEY, JSON.stringify(state));
 
-                // Trigger AI Decision at specific milestones to save API calls
-                if(CONSTANTS.AI_MILESTONES.includes(state.person.age)) {
-                    const decision = await AI.requestDecision(`You just turned ${state.person.age}. It's a major milestone. Re-evaluate your life focus.`);
-                    AI.processDecision(decision);
-                }
+                // Bắt đầu suy nghĩ Kế Hoạch Năm (Thời gian sẽ dừng lại trong lúc chờ API)
+                const plan = await AI.requestYearlyPlan();
+                AI.processDecision(plan);
             }
 
             static generateRandomEvent() {
                 const r = Math.random();
                 if(r < 0.2) {
                     state.world.marketTrend = state.world.marketTrend === "Bull" ? "Bear" : "Bull";
-                    UI.logEvent(`Stock market shifted to ${state.world.marketTrend}!`, "critical");
+                    UI.logSystemEvent(`Chứng khoán chuyển sang thị trường ${state.world.marketTrend}!`, "critical");
                 } else if(r < 0.4 && state.career.isEmployed) {
-                    state.career.salary *= 1.1;
-                    UI.logEvent("Received a raise at work!", "normal");
-                } else if(r < 0.6 && state.finances.money > 1000) {
-                    state.finances.money -= 1000;
-                    UI.logEvent("Unexpected cost: $1000.", "critical");
-                } else if (r < 0.7 && state.person.stats.health < 50) {
-                    state.person.stats.health -= 15;
-                    state.finances.debt += 5000;
-                    UI.logEvent("Suffered a medical emergency! Took on medical debt.", "critical");
+                    state.finances.yearlySalary *= 1.15;
+                    UI.logSystemEvent("Được thăng chức / tăng lương 15%!", "normal");
+                } else if (r < 0.6 && state.person.stats.health < 60) {
+                    state.person.stats.health -= 20;
+                    state.finances.debt += 10000;
+                    UI.logSystemEvent("Bệnh nặng nhập viện! Mắc nợ viện phí $10,000.", "critical");
                 }
             }
 
             static handleDeath() {
                 this.stop();
-                UI.logEvent(`${state.person.name} has passed away at age ${state.person.age}.`, "critical");
+                UI.logSystemEvent(`${state.person.name} đã qua đời ở tuổi ${state.person.age}.`, "critical");
+                UI.logAIChat(`(Tiếng bíp tim ngừng đập)... Cuộc đời kết thúc.`);
                 
                 setTimeout(() => {
                     state.generation++;
                     const inheritance = Math.max(0, state.finances.money + state.finances.bank + state.finances.stocks - state.finances.debt);
                     
+                    // Đầu thai
+                    state.time.yearProgress = 0;
                     state.person = {
-                        id: Utils.uuid(), name: `Alpha Gen ${state.generation}`, age: 1, lifeStage: "Toddler",
+                        name: `Hậu duệ Đời ${state.generation}`, age: 1, lifeStage: "Sơ sinh",
                         personality: PERSONALITY_TRAITS[Math.floor(Math.random() * PERSONALITY_TRAITS.length)],
                         avatar: "👶", stats: { health: 100, energy: 100, stress: 0, mood: 100 },
-                        currentAction: "Sleeping", macroFocus: "rest"
+                        macroFocus: "rest"
                     };
-
-                    state.finances = { money: 0, bank: inheritance, debt: 0, stocks: 0, income: 0, expenses: 10 };
-                    state.career = { title: "None", salary: 0, isEmployed: false, isStudent: false };
+                    state.finances = { money: inheritance, bank: 0, debt: 0, stocks: 0, yearlySalary: 0, yearlyExpenses: 2000 };
+                    state.career = { title: "Không có", isEmployed: false, isStudent: false };
                     state.relationships = [];
                     state.flags = { hasPartner: false, hasKids: 0, isThinking: false };
                     
-                    UI.logEvent(`Generation ${state.generation} begins. Inherited ${Utils.formatMoney(inheritance)}.`, "critical");
-                    StorageEngine.save();
+                    UI.logSystemEvent(`Đời thứ ${state.generation} bắt đầu. Kế thừa $${Utils.formatMoney(inheritance)}.`, "critical");
                     this.start();
-                }, 4000);
+                }, 5000);
             }
         }
 
         /******************************************************************
-         * INITIALIZATION & EVENT LISTENERS
+         * INITIALIZATION
          ******************************************************************/
         function initApp() {
-            UI.initCharts();
-            if(StorageEngine.load() && state.apiKey) {
-                document.getElementById('save-found-msg').style.display = 'block';
-                document.getElementById('api-key-input').value = state.apiKey;
+            const savedData = localStorage.getItem(CONSTANTS.SAVE_KEY);
+            if(savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    if(parsed.apiKey) {
+                        state = { ...state, ...parsed };
+                        document.getElementById('save-found-msg').style.display = 'block';
+                        document.getElementById('api-key-input').value = state.apiKey;
+                    }
+                } catch(e) {}
             }
 
             document.getElementById('start-btn').addEventListener('click', () => {
                 const key = document.getElementById('api-key-input').value.trim();
-                if(!key) { alert("Please enter OpenRouter API key"); return; }
+                if(!key) { alert("Vui lòng nhập OpenRouter API Key"); return; }
                 state.apiKey = key;
                 
                 if(!state.person.personality) {
@@ -696,30 +639,7 @@ Respond ONLY in pure JSON format:
                 }
 
                 document.getElementById('setup-modal').style.display = 'none';
-                StorageEngine.save();
-                UI.updateAll();
-                SimulationEngine.start();
-            });
-
-            // Manual Actions (Force state)
-            const bindAction = (id, focus) => {
-                document.getElementById(id).addEventListener('click', () => {
-                    state.person.macroFocus = focus;
-                    UI.updateAll();
-                });
-            };
-            bindAction('btn-study', 'study');
-            bindAction('btn-work', 'work');
-            bindAction('btn-rest', 'rest');
-            bindAction('btn-invest', 'invest');
-            bindAction('btn-socialize', 'socialize');
-            bindAction('btn-health', 'health');
-
-            // Force AI Manual Button
-            document.getElementById('force-ai-btn').addEventListener('click', async () => {
-                if(state.flags.isThinking) return;
-                const decision = await AI.requestDecision("User forced a life evaluation. What is your next move?");
-                AI.processDecision(decision);
+                SimulationEngine.start(); // Bắt đầu game
             });
         }
 
