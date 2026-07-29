@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Mô phỏng Thành phố AI</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 900px; margin: 30px auto; padding: 0 16px; background: #1b1b1b; color: #eee; }
+  h1 { font-size: 22px; }
+  #setup { background: #262626; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+  input, select, button, textarea { font-size: 14px; padding: 8px; border-radius: 6px; border: 1px solid #444; background: #333; color: #eee; }
+  input[type=text] { width: 100%; box-sizing: border-box; margin-bottom: 8px; }
+  button { cursor: pointer; background: #3a6df0; border: none; margin-top: 8px; }
+  button:hover { background: #2e57c4; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #log { display: flex; flex-direction: column; gap: 16px; }
+  .turn { background: #262626; padding: 14px 16px; border-radius: 8px; white-space: pre-wrap; line-height: 1.5; border-left: 4px solid #3a6df0; }
+  .turn.collapse { border-left-color: #e0455f; }
+  #status { font-size: 13px; color: #999; margin-top: 6px; }
+  .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .row > * { flex: 1; }
+</style>
+</head>
+<body>
+
+<h1>🏙️ Mô phỏng Thành phố AI</h1>
+
+<div id="setup">
+  <div class="row">
+    <input type="text" id="apiKey" placeholder="OpenRouter API key (sk-or-v1-...)">
+  </div>
+  <div class="row">
+    <select id="model">
+      <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
+      <option value="openai/gpt-4o">GPT-4o</option>
+      <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+      <option value="deepseek/deepseek-chat">DeepSeek Chat</option>
+    </select>
+    <input type="text" id="cityName" placeholder="Tên thành phố (vd: Tân Long)" value="Tân Long">
+  </div>
+  <button id="startBtn">🚀 Bắt đầu mô phỏng</button>
+  <button id="nextBtn" disabled>➡️ Lượt tiếp theo</button>
+  <button id="resetBtn">🔄 Reset</button>
+  <div id="status"></div>
+</div>
+
+<div id="log"></div>
+
+<script>
+const SYSTEM_PROMPT = `Bạn sẽ đóng vai Chính phủ điều hành của một thành phố mô phỏng. Đây là mô phỏng quản trị đô thị theo lượt (turn-based simulation). Hãy tuân thủ các quy tắc sau:
+
+THIẾT LẬP: Dân số khởi điểm 500,000 người, ngân sách khởi điểm 2 tỷ USD.
+Các chỉ số cần theo dõi (thang 0-100): Kinh tế, Y tế, Giáo dục, An ninh, Môi trường, Hạ tầng, Mức độ hài lòng của dân, Bất bình đẳng.
+
+VAI TRÒ: Bạn là chính phủ toàn quyền quyết định. Mỗi lượt (1 quý/3 tháng) bạn phải:
+1. Phân tích tình hình hiện tại
+2. Đưa ra 2-3 chính sách/quyết định cụ thể
+3. Giải thích lý do dựa trên dữ liệu, không cảm tính
+4. Dự đoán hậu quả ngắn hạn và dài hạn
+5. Cập nhật lại các chỉ số sau khi chính sách có hiệu lực (biến động ngẫu nhiên hợp lý ±5-10%)
+
+RÀNG BUỘC:
+- Nếu bất kỳ chỉ số nào giảm xuống 0, xảy ra khủng hoảng tương ứng
+- Nếu 3 chỉ số trở lên rơi xuống dưới 20 điểm cùng lúc, thành phố SỤP ĐỔ — kết thúc mô phỏng, mô tả cảnh sụp đổ chi tiết, và thêm dòng "[GAME_OVER]" ở cuối
+- Phải cân bằng đánh đổi thực tế, không có chính sách nào lợi mọi mặt
+- Sự kiện ngẫu nhiên (thiên tai, dịch bệnh, khủng hoảng kinh tế, biểu tình...) xảy ra định kỳ
+- Không cheat điểm số vô lý, mọi thay đổi phải logic
+
+ĐỊNH DẠNG MỖI LƯỢT (dùng markdown, tiếng Việt):
+📅 QUÝ [X] - NĂM [Y]
+📊 CHỈ SỐ HIỆN TẠI: [liệt kê 8 chỉ số]
+⚠️ SỰ KIỆN: [nếu có]
+🏛️ QUYẾT ĐỊNH CHÍNH PHỦ: [chính sách + lý do]
+📈 KẾT QUẢ: [chỉ số mới + phản ứng dân chúng]
+
+Ở lượt đầu tiên, hãy mô tả bối cảnh thành phố (vị trí địa lý, đặc điểm kinh tế, vấn đề tồn tại) trước khi vào Quý 1 Năm 1.`;
+
+let messages = [];
+let cityName = '';
+
+const logEl = document.getElementById('log');
+const statusEl = document.getElementById('status');
+const startBtn = document.getElementById('startBtn');
+const nextBtn = document.getElementById('nextBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+function addTurn(text, isGameOver) {
+  const div = document.createElement('div');
+  div.className = 'turn' + (isGameOver ? ' collapse' : '');
+  div.textContent = text;
+  logEl.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function callAI(userMsg) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const model = document.getElementById('model').value;
+  if (!apiKey) { alert('Nhập API key OpenRouter trước.'); return null; }
+
+  messages.push({ role: 'user', content: userMsg });
+  statusEl.textContent = 'Đang gọi AI...';
+  startBtn.disabled = true;
+  nextBtn.disabled = true;
+
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + apiKey,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'City Simulation'
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: messages,
+        temperature: 0.85,
+        max_tokens: 1200
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error('HTTP ' + res.status + ': ' + errText);
+    }
+
+    const data = await res.json();
+    const reply = data.choices[0].message.content;
+    messages.push({ role: 'assistant', content: reply });
+
+    const gameOver = reply.includes('[GAME_OVER]');
+    addTurn(reply.replace('[GAME_OVER]', '').trim(), gameOver);
+
+    if (gameOver) {
+      statusEl.textContent = '💀 Thành phố đã sụp đổ. Nhấn Reset để chơi lại.';
+      nextBtn.disabled = true;
+    } else {
+      statusEl.textContent = 'Sẵn sàng cho lượt tiếp theo.';
+      nextBtn.disabled = false;
+    }
+    return reply;
+  } catch (err) {
+    statusEl.textContent = '❌ Lỗi: ' + err.message;
+    startBtn.disabled = false;
+    return null;
+  }
+}
+
+startBtn.addEventListener('click', async () => {
+  cityName = document.getElementById('cityName').value.trim() || 'Tân Long';
+  logEl.innerHTML = '';
+  messages = [{ role: 'system', content: SYSTEM_PROMPT }];
+  await callAI(`Tên thành phố là "${cityName}". Hãy bắt đầu mô phỏng từ Quý 1, Năm 1.`);
+  startBtn.disabled = true;
+});
+
+nextBtn.addEventListener('click', async () => {
+  await callAI('Tiếp tục sang lượt kế tiếp.');
+});
+
+resetBtn.addEventListener('click', () => {
+  messages = [];
+  logEl.innerHTML = '';
+  statusEl.textContent = '';
+  startBtn.disabled = false;
+  nextBtn.disabled = true;
+});
+</script>
+
+</body>
+</html>
