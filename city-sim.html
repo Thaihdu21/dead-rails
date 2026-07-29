@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Life Simulator: Economy & Stocks</title>
+    <title>AI Life Simulator: Economy & Stocks (OpenRouter)</title>
     <style>
         :root {
             --bg-base: #0f172a;
@@ -110,7 +110,7 @@
                 <b>Tốc độ: 30 Giây = 1 Năm.</b><br>
                 Đã kích hoạt Chu kỳ Kinh tế vĩ mô & Chứng khoán.
             </p>
-            <input type="password" id="api-key-input" readonly>
+            <input type="password" id="api-key-input" placeholder="Nhập OpenRouter API Key...">
             <button class="btn" id="start-btn">Bắt Đầu Cuộc Đời</button>
         </div>
     </div>
@@ -236,12 +236,11 @@
          ******************************************************************/
         const CONSTANTS = {
             API_URL: "https://openrouter.ai/api/v1/chat/completions",
-            MODEL: "google/gemma-4-26b-a4b-it:free", 
-            DEFAULT_KEY: "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",
+            MODEL: "google/gemma-4-31b-it:free", 
             TICK_RATE: 1000, 
             SECONDS_PER_YEAR: 30, 
             START_YEAR: 2024,
-            SAVE_KEY: "ai_life_sim_v3_economy"
+            SAVE_KEY: "ai_life_sim_v4_openrouter" // Đã đổi tên file save
         };
 
         const Utils = {
@@ -254,14 +253,14 @@
          * GAME STATE
          ******************************************************************/
         let state = {
-            apiKey: CONSTANTS.DEFAULT_KEY,
+            apiKey: "", // Key sẽ được nhập vào lúc khởi tạo
             generation: 1,
             time: { year: CONSTANTS.START_YEAR, yearProgress: 0 },
             world: { 
                 weather: "Nắng", 
-                economyPhase: "Phục Hồi", // Phục Hồi -> Tăng Trưởng -> Bong Bóng -> Suy Thoái
+                economyPhase: "Phục Hồi", 
                 cycleYearsLeft: 3,
-                bankInterestRate: 0.05, // 5% / năm
+                bankInterestRate: 0.05, 
                 marketIndex: 1000 
             },
             person: {
@@ -297,7 +296,6 @@
             static updateAll() {
                 this.get('ui-year').innerText = state.time.year;
                 
-                // Color code economy phase
                 const phaseColors = {"Phục Hồi": "var(--accent-blue)", "Tăng Trưởng": "var(--accent-green)", "Bong Bóng": "var(--accent-yellow)", "Suy Thoái": "var(--accent-red)"};
                 const phaseEl = this.get('ui-economy-phase');
                 phaseEl.innerText = state.world.economyPhase;
@@ -352,7 +350,6 @@
                 const data = state.history.market;
                 const canvas = this.ctx.canvas;
                 
-                // Fix canvas blur resolution
                 canvas.width = canvas.parentElement.clientWidth - 20;
                 canvas.height = 100;
 
@@ -366,13 +363,11 @@
                 this.ctx.beginPath();
                 this.ctx.lineWidth = 2;
                 
-                // Color based on latest trend
                 const isUp = data[data.length-1] >= data[data.length-2];
-                this.ctx.strokeStyle = isUp ? '#10b981' : '#ef4444'; // Green if up, Red if down
+                this.ctx.strokeStyle = isUp ? '#10b981' : '#ef4444'; 
                 
-                const step = canvas.width / (Math.max(data.length - 1, 10)); // keep min 10 points grid
+                const step = canvas.width / (Math.max(data.length - 1, 10)); 
                 
-                // Draw line
                 data.forEach((val, i) => {
                     const x = i * step;
                     const y = canvas.height - ((val - min) / (range || 1)) * canvas.height;
@@ -381,7 +376,6 @@
                 });
                 this.ctx.stroke();
 
-                // Add gradient fill
                 this.ctx.lineTo((data.length - 1) * step, canvas.height);
                 this.ctx.lineTo(0, canvas.height);
                 this.ctx.fillStyle = isUp ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
@@ -412,7 +406,10 @@
          ******************************************************************/
         class AI {
             static async requestYearlyPlan() {
-                if(!state.apiKey) return null;
+                if(!state.apiKey) {
+                    UI.logSystemEvent("Lỗi: Chưa có OpenRouter API Key. Kích hoạt bản năng sinh tồn.", "critical");
+                    return this.getFallbackDecision();
+                }
                 state.flags.isThinking = true;
                 UI.updateAll();
 
@@ -436,7 +433,12 @@ Trả về JSON:
                 try {
                     const response = await fetch(CONSTANTS.API_URL, {
                         method: "POST",
-                        headers: { "Authorization": `Bearer ${state.apiKey}`, "Content-Type": "application/json" },
+                        headers: { 
+                            "Authorization": `Bearer ${state.apiKey}`, 
+                            "Content-Type": "application/json",
+                            "HTTP-Referer": "https://a-life-sim-project.com", // Optional, but good practice for OpenRouter
+                            "X-Title": "AI Life Sim" // Optional, for OpenRouter analytics
+                        },
                         body: JSON.stringify({
                             model: CONSTANTS.MODEL,
                             messages: [{ role: "system", content: systemPrompt }],
@@ -447,10 +449,16 @@ Trả về JSON:
                     const data = await response.json();
                     if (data.error) throw new Error(data.error.message);
 
+                    if (!data.choices || !data.choices[0]) {
+                        console.warn("AI didn't return choices. Using fallback.");
+                        return this.getFallbackDecision();
+                    }
+
                     let content = data.choices[0].message.content;
                     const jsonStart = content.indexOf('{');
                     const jsonEnd = content.lastIndexOf('}');
                     if(jsonStart !== -1 && jsonEnd !== -1) content = content.substring(jsonStart, jsonEnd + 1);
+                    else throw new Error("Could not extract JSON from AI response.");
 
                     const parsed = JSON.parse(content);
                     state.flags.isThinking = false;
@@ -458,9 +466,26 @@ Trả về JSON:
 
                 } catch (error) {
                     console.error("AI Error:", error);
+                    UI.logSystemEvent("Lỗi kết nối AI hoặc lỗi parsing. Kích hoạt bản năng sinh tồn.", "critical");
                     state.flags.isThinking = false;
-                    return { thought: "Đầu óc trống rỗng quá, cứ sống qua ngày vậy...", macro_focus: "work", major_action: "none" };
+                    UI.updateAll();
+                    return this.getFallbackDecision();
                 }
+            }
+
+            static getFallbackDecision() {
+                let autoFocus = "work"; // Mặc định là làm việc
+                if (state.person.stats.stress > 80) autoFocus = "rest";
+                if (state.finances.money < 1000 && !state.career.isEmployed && state.person.age >= 18) autoFocus = "work";
+
+                let autoAction = "none";
+                if (state.finances.money < 0 && !state.career.isEmployed && state.person.age >= 18) autoAction = "apply_job";
+
+                return {
+                    thought: "(Hệ thống AI gián đoạn) Năm nay cứ sống theo bản năng, kiếm tiền và thư giãn...",
+                    macro_focus: autoFocus,
+                    major_action: autoAction
+                };
             }
 
             static processDecision(decision) {
@@ -468,23 +493,21 @@ Trả về JSON:
                 
                 if(decision.thought) UI.logAIChat(decision.thought);
                 
-                // Ánh xạ focus mới "bank" vào biến hệ thống
                 let focus = decision.macro_focus;
-                if(focus === "bank") focus = "invest"; // Chung logic xử lý dòng tiền
-                state.person.macroFocus = focus;
-                
-                // Phân bổ dòng tiền nếu AI muốn đầu tư / tiết kiệm ngay đầu năm
-                if(decision.macro_focus === "invest" && state.finances.money > 1000) {
-                    let amount = state.finances.money * 0.5; // Dành 50% tiền mặt mua cổ phiếu
-                    state.finances.money -= amount;
-                    state.finances.stocks += amount;
-                    UI.logSystemEvent(`Đã dùng $${Utils.formatMoney(amount)} mua cổ phiếu.`, "normal");
-                } else if(decision.macro_focus === "bank" && state.finances.money > 1000) {
-                    let amount = state.finances.money * 0.5; // Dành 50% tiền gửi NH an toàn
-                    state.finances.money -= amount;
-                    state.finances.bank += amount;
-                    UI.logSystemEvent(`Đã gửi $${Utils.formatMoney(amount)} vào ngân hàng ăn lãi.`, "normal");
+                if(focus === "bank" || focus === "invest") { // Gộp chung logic xử lý tiền
+                    if(state.finances.money > 1000) {
+                        let amount = state.finances.money * 0.5;
+                        state.finances.money -= amount;
+                        if(focus === "invest") {
+                            state.finances.stocks += amount;
+                            UI.logSystemEvent(`Đã dùng $${Utils.formatMoney(amount)} mua cổ phiếu.`, "normal");
+                        } else { // focus === "bank"
+                            state.finances.bank += amount;
+                            UI.logSystemEvent(`Đã gửi $${Utils.formatMoney(amount)} vào ngân hàng ăn lãi.`, "normal");
+                        }
+                    }
                 }
+                state.person.macroFocus = focus; // Cập nhật trạng thái focus
 
                 const action = decision.major_action;
                 if(action === "apply_job" && state.person.age >= 16 && !state.career.isEmployed) {
@@ -496,7 +519,7 @@ Trả về JSON:
                     UI.logSystemEvent("Đã nộp đơn nghỉ việc.");
                 } else if(action === "propose" && state.person.age >= 18 && !state.flags.hasPartner) {
                     state.flags.hasPartner = true;
-                    UI.logSystemEvent("Đã kết hôn! 💍 🎉", "critical");
+                    UI.logSystemEvent("Đã cầu hôn và kết hôn! 💍 🎉", "critical");
                     state.relationships.push({ name: `Vợ/Chồng`, trust: 100 });
                 }
             }
@@ -520,7 +543,7 @@ Trả về JSON:
                 if(state.flags.isThinking) return; 
 
                 state.time.yearProgress++;
-                this.applyEconomyPerSecond(); // Xử lý kinh tế liên tục
+                this.applyEconomyPerSecond(); 
                 
                 UI.updateAll();
                 UI.drawMarketChart();
@@ -533,37 +556,30 @@ Trả về JSON:
                 }
             }
 
-            // Động cơ kinh tế chạy từng giây
             static applyEconomyPerSecond() {
                 const w = state.world;
                 const f = state.finances;
 
-                // 1. Lãi suất Ngân hàng (Tính theo giây sinh lời kép)
                 const interestPerSecond = w.bankInterestRate / CONSTANTS.SECONDS_PER_YEAR;
                 if(f.bank > 0) f.bank += f.bank * interestPerSecond;
 
-                // 2. Dao động Chứng khoán (Stocks)
                 let baseTrend = 0; 
-                let volatility = (Math.random() - 0.5) * 0.02; // Chớp nhoáng +/- 1% mỗi giây
+                let volatility = (Math.random() - 0.5) * 0.02; 
 
-                // Áp lực xu hướng tuỳ chu kỳ
-                if(w.economyPhase === "Phục Hồi") baseTrend = 0.05; // Tổng +5% năm
-                if(w.economyPhase === "Tăng Trưởng") baseTrend = 0.15; // Tổng +15% năm
-                if(w.economyPhase === "Bong Bóng") { baseTrend = 0.25; volatility *= 2; } // +25% nhưng giật mạnh
-                if(w.economyPhase === "Suy Thoái") { baseTrend = -0.15; volatility *= 1.5; } // Rớt -15%
+                if(w.economyPhase === "Phục Hồi") baseTrend = 0.05; 
+                if(w.economyPhase === "Tăng Trưởng") baseTrend = 0.15; 
+                if(w.economyPhase === "Bong Bóng") { baseTrend = 0.25; volatility *= 2; } 
+                if(w.economyPhase === "Suy Thoái") { baseTrend = -0.15; volatility *= 1.5; } 
 
                 let dailyGrowth = (baseTrend / CONSTANTS.SECONDS_PER_YEAR) + volatility;
                 
-                // Áp dụng vào Index và Tài sản AI
                 w.marketIndex += w.marketIndex * dailyGrowth;
                 if(f.stocks > 0) f.stocks += f.stocks * dailyGrowth;
 
-                // 3. Thu nhập & Chi phí rải đều
                 if(state.career.isEmployed) f.money += (f.yearlySalary / CONSTANTS.SECONDS_PER_YEAR);
                 let livingCost = state.person.age >= 18 ? 15000 : 0; 
                 f.money -= ((livingCost + f.yearlyExpenses) / CONSTANTS.SECONDS_PER_YEAR);
 
-                // 4. Trả Nợ / Tăng Nợ (Nợ lãi cao hơn lãi ngân hàng 5%)
                 const debtInterest = (w.bankInterestRate + 0.05) / CONSTANTS.SECONDS_PER_YEAR;
                 if(f.debt > 0) {
                     f.debt += f.debt * debtInterest;
@@ -575,7 +591,6 @@ Trả về JSON:
                     f.debt += Math.abs(f.money); f.money = 0; 
                 }
 
-                // 5. Thể chất AI
                 const s = state.person.stats;
                 if(state.person.macroFocus === "work") s.stress += (15/30);
                 if(state.person.macroFocus === "rest") { s.stress -= 1; s.health += (5/30); }
@@ -588,30 +603,26 @@ Trả về JSON:
                 if(s.health <= 0) this.handleDeath();
             }
 
-            // Cập nhật Chu kỳ Kinh tế hàng năm
             static updateEconomyCycle() {
                 state.world.cycleYearsLeft--;
                 if(state.world.cycleYearsLeft <= 0) {
-                    // Chuyển giai đoạn
                     const phases = ["Phục Hồi", "Tăng Trưởng", "Bong Bóng", "Suy Thoái"];
                     let currentIndex = phases.indexOf(state.world.economyPhase);
                     let nextIndex = (currentIndex + 1) % phases.length;
                     
                     state.world.economyPhase = phases[nextIndex];
-                    state.world.cycleYearsLeft = Utils.randomInt(3, 7); // Mỗi chu kỳ kéo dài 3-7 năm
+                    state.world.cycleYearsLeft = Utils.randomInt(3, 7); 
 
-                    // Điều chỉnh Lãi suất ngân hàng theo Nhà Nước (Chống lạm phát / Cứu nền kinh tế)
                     if(state.world.economyPhase === "Tăng Trưởng") state.world.bankInterestRate = 0.06;
-                    if(state.world.economyPhase === "Bong Bóng") state.world.bankInterestRate = 0.09; // Lãi cao hút tiền về
-                    if(state.world.economyPhase === "Suy Thoái") state.world.bankInterestRate = 0.02; // Hạ lãi suất kích cầu
+                    if(state.world.economyPhase === "Bong Bóng") state.world.bankInterestRate = 0.09; 
+                    if(state.world.economyPhase === "Suy Thoái") state.world.bankInterestRate = 0.02; 
                     if(state.world.economyPhase === "Phục Hồi") state.world.bankInterestRate = 0.04;
 
                     UI.logSystemEvent(`Nền kinh tế bước vào giai đoạn: ${state.world.economyPhase.toUpperCase()}!`, "critical");
                 }
                 
-                // Lưu mốc vẽ biểu đồ
                 state.history.market.push(state.world.marketIndex);
-                if(state.history.market.length > 50) state.history.market.shift(); // Giữ 50 điểm trên chart
+                if(state.history.market.length > 50) state.history.market.shift(); 
             }
 
             static async triggerNewYear() {
@@ -623,7 +634,9 @@ Trả về JSON:
 
                 UI.logSystemEvent(`🎉 Chúc mừng sinh nhật Tuổi ${state.person.age}!`);
                 
-                this.updateEconomyCycle(); // Tính lại quy luật vĩ mô năm nay
+                this.updateEconomyCycle(); 
+
+                localStorage.setItem(CONSTANTS.SAVE_KEY, JSON.stringify(state)); // Lưu state trước khi gọi AI
 
                 const plan = await AI.requestYearlyPlan();
                 AI.processDecision(plan);
@@ -647,20 +660,44 @@ Trả về JSON:
                     state.finances = { money: inheritance, bank: 0, debt: 0, stocks: 0, yearlySalary: 0, yearlyExpenses: 2000 };
                     state.career = { title: "Không có", isEmployed: false, isStudent: false };
                     state.relationships = [];
-                    
+                    state.flags = { hasPartner: false, hasKids: 0, isThinking: false }; // Reset isThinking flag
+
                     UI.logSystemEvent(`Đời thứ ${state.generation} bắt đầu. Kế thừa $${Utils.formatMoney(inheritance)}.`, "critical");
                     this.start();
                 }, 5000);
             }
         }
 
-        window.onload = () => {
+        /******************************************************************
+         * INITIALIZATION
+         ******************************************************************/
+        function initApp() {
+            const savedData = localStorage.getItem(CONSTANTS.SAVE_KEY);
+            if(savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    state = { ...state, ...parsed };
+                    // Sau khi load, nếu có API Key cũ thì đưa vào ô nhập liệu
+                    document.getElementById('api-key-input').value = state.apiKey;
+                    UI.logSystemEvent("Đã tìm thấy dữ liệu game cũ. Tiếp tục.", "normal");
+                } catch(e) {
+                    UI.logSystemEvent("Lỗi đọc dữ liệu save. Bắt đầu game mới.", "critical");
+                    localStorage.removeItem(CONSTANTS.SAVE_KEY); // Xóa save cũ nếu lỗi
+                }
+            }
+
             document.getElementById('start-btn').addEventListener('click', () => {
-                if(!state.person.personality) state.person.personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
+                const key = document.getElementById('api-key-input').value.trim();
+                if(!key) { alert("Vui lòng nhập OpenRouter API Key để bắt đầu."); return; }
+                state.apiKey = key; // Lưu API Key mới vào state
+
+                if(!state.person.personality) state.person.personality = PERSONALITIES[Utils.randomInt(0, PERSONALITIES.length - 1)];
                 document.getElementById('setup-modal').style.display = 'none';
                 SimulationEngine.start();
             });
-        };
+        }
+
+        window.onload = initApp;
     </script>
 </body>
 </html>
