@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Life Simulator: glm-4.5-flash</title>
+    <title>AI Life Simulator: Economy & Stocks</title>
     <style>
         :root {
             --bg-base: #0f172a;
@@ -32,7 +32,7 @@
         .btn { padding: 10px 20px; background: var(--accent-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: var(--transition); width: 100%; }
         .btn:hover { background: #2563eb; }
 
-        /* Header & Year Progress */
+        /* Header */
         header { padding: 15px 30px; background: var(--bg-panel); display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--bg-card); }
         .header-top { display: flex; justify-content: space-between; align-items: center; }
         .world-clock { display: flex; gap: 20px; font-size: 1.1rem; }
@@ -49,7 +49,6 @@
         main { display: grid; grid-template-columns: 300px 1fr 350px; gap: 20px; padding: 20px; height: calc(100vh - 85px); }
         .panel { background: var(--bg-panel); border-radius: var(--border-radius); padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: hidden; }
         
-        /* Scrollbar styles */
         .scrollable { overflow-y: auto; padding-right: 5px; }
         .scrollable::-webkit-scrollbar { width: 6px; }
         .scrollable::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 10px; }
@@ -72,14 +71,11 @@
 
         /* Center Panel: Chat & System Log */
         .center-layout { display: grid; grid-template-rows: 60% 40%; gap: 15px; height: 100%; }
-        
-        /* AI Chat Box */
         .chat-box { background: var(--bg-base); border: 1px solid var(--bg-card); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         .chat-message { display: flex; flex-direction: column; gap: 5px; animation: slideIn 0.3s ease; }
         .chat-bubble { background: var(--bg-panel); padding: 12px 15px; border-radius: 12px; border-bottom-left-radius: 2px; font-size: 0.95rem; line-height: 1.4; border: 1px solid rgba(139, 92, 246, 0.3); }
         .chat-meta { font-size: 0.75rem; color: var(--accent-purple); font-weight: bold; margin-left: 5px; }
 
-        /* System Timeline */
         .timeline-box { background: var(--bg-base); border: 1px solid var(--bg-card); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         .event-card { background: var(--bg-card); padding: 10px; border-radius: 6px; font-size: 0.85rem; border-left: 3px solid var(--accent-blue); animation: slideIn 0.3s ease; }
         .event-card.critical { border-left-color: var(--accent-red); background: rgba(239, 68, 68, 0.1); }
@@ -87,16 +83,21 @@
 
         @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
-        /* Right Panel: Finances & Economy */
+        /* Right Panel: Economy */
         .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .dash-card { background: var(--bg-card); padding: 12px; border-radius: 8px; text-align: center; }
-        .dash-card h4 { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; }
-        .dash-card p { font-size: 1.1rem; font-weight: bold; }
+        .dash-card { background: var(--bg-card); padding: 10px; border-radius: 8px; text-align: center; }
+        .dash-card h4 { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 5px; }
+        .dash-card p { font-size: 1.05rem; font-weight: bold; }
         .money-positive { color: var(--accent-green); }
         .money-negative { color: var(--accent-red); }
+        .money-neutral { color: var(--accent-yellow); }
+
+        .chart-container { background: var(--bg-base); border: 1px solid var(--bg-card); border-radius: 8px; padding: 10px; height: 120px; display: flex; flex-direction: column; margin-bottom: 10px; }
+        .chart-container h4 { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; display: flex; justify-content: space-between;}
+        canvas { width: 100%; height: 100%; }
 
         .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
-        .action-btn { background: var(--bg-card); color: var(--text-main); border: 1px solid transparent; padding: 8px; border-radius: 6px; font-size: 0.8rem; pointer-events: none; }
+        .action-btn { background: var(--bg-card); color: var(--text-main); border: 1px solid transparent; padding: 8px; border-radius: 6px; font-size: 0.8rem; pointer-events: none; text-align: center; }
         .action-btn.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
     </style>
 </head>
@@ -107,11 +108,10 @@
             <h2>AI Life Simulator</h2>
             <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">
                 <b>Tốc độ: 30 Giây = 1 Năm.</b><br>
-                Hệ thống đã gắn sẵn API Beeknoee.
+                Đã kích hoạt Chu kỳ Kinh tế vĩ mô & Chứng khoán.
             </p>
             <input type="password" id="api-key-input" readonly>
             <button class="btn" id="start-btn">Bắt Đầu Cuộc Đời</button>
-            <p id="save-found-msg" style="margin-top: 15px; font-size: 0.8rem; color: var(--accent-green); display: none;">Đã tìm thấy save cũ. Khôi phục thành công.</p>
         </div>
     </div>
 
@@ -119,11 +119,11 @@
         <div class="header-top">
             <div class="world-clock">
                 <div>Năm: <span id="ui-year">2024</span></div>
-                <div>Thời tiết: <span id="ui-weather">Nắng</span></div>
+                <div>Kinh tế: <span id="ui-economy-phase" style="color:var(--accent-yellow);">Phục Hồi</span></div>
             </div>
             <div class="api-status">
                 Gen <span id="ui-generation" style="color:var(--accent-blue);font-weight:bold;">1</span>
-                | Trạng thái AI: <div class="indicator" id="ai-indicator"></div> <span id="ai-status-text">Đang Sống</span>
+                | AI: <div class="indicator" id="ai-indicator"></div> <span id="ai-status-text">Đang Sống</span>
             </div>
         </div>
         <div style="position: relative; margin-top: 10px;">
@@ -155,10 +155,6 @@
                 <div class="progress-bar"><div class="progress-fill fill-health" id="bar-health" style="width: 100%"></div></div>
             </div>
             <div class="stat-group">
-                <div class="stat-label"><span>Năng Lượng</span> <span id="ui-val-energy">100%</span></div>
-                <div class="progress-bar"><div class="progress-fill fill-energy" id="bar-energy" style="width: 100%"></div></div>
-            </div>
-            <div class="stat-group">
                 <div class="stat-label"><span>Căng Thẳng</span> <span id="ui-val-stress">0%</span></div>
                 <div class="progress-bar"><div class="progress-fill fill-stress" id="bar-stress" style="width: 0%"></div></div>
             </div>
@@ -173,51 +169,53 @@
 
         <!-- Center Panel: AI Thoughts & System Events -->
         <div class="center-layout">
-            <!-- AI Mind Chat -->
             <div class="panel" style="padding: 0;">
-                <h4 style="padding: 15px 15px 5px 15px; color: var(--accent-purple); border-bottom: 1px solid var(--bg-card);">🧠 Kế Hoạch & Quyết Định của AI</h4>
-                <div class="chat-box scrollable" id="ui-ai-chat" style="flex: 1; border: none; border-radius: 0;">
-                    <!-- Chat bubbles go here -->
-                </div>
+                <h4 style="padding: 15px 15px 5px 15px; color: var(--accent-purple); border-bottom: 1px solid var(--bg-card);">🧠 Tâm Trí & Quyết Định của AI</h4>
+                <div class="chat-box scrollable" id="ui-ai-chat" style="flex: 1; border: none; border-radius: 0;"></div>
             </div>
-
-            <!-- System Timeline -->
             <div class="panel" style="padding: 0;">
-                <h4 style="padding: 15px 15px 5px 15px; border-bottom: 1px solid var(--bg-card);">📜 Sự Kiện Cuộc Đời (Hệ Thống)</h4>
-                <div class="timeline-box scrollable" id="ui-timeline" style="flex: 1; border: none; border-radius: 0;">
-                    <!-- System events go here -->
-                </div>
+                <h4 style="padding: 15px 15px 5px 15px; border-bottom: 1px solid var(--bg-card);">📜 Nhật Ký Sự Kiện Cuộc Đời</h4>
+                <div class="timeline-box scrollable" id="ui-timeline" style="flex: 1; border: none; border-radius: 0;"></div>
             </div>
         </div>
 
-        <!-- Right Panel: Data, Economy -->
+        <!-- Right Panel: Economy & Market -->
         <div class="panel scrollable">
-            <h4>Tài Chính (Biến động theo giây)</h4>
+            
+            <div class="chart-container">
+                <h4>
+                    <span>📈 Chỉ số VN-Index</span>
+                    <span id="ui-market-points" style="color:var(--accent-green);">1000 pts</span>
+                </h4>
+                <canvas id="chart-market"></canvas>
+            </div>
+
             <div class="dashboard-grid">
                 <div class="dash-card">
-                    <h4>Tiền & Ngân Hàng</h4>
-                    <p id="ui-money" class="money-positive">$0</p>
+                    <h4>Tiền Mặt</h4>
+                    <p id="ui-money" class="money-neutral">$0</p>
                 </div>
                 <div class="dash-card">
-                    <h4>Nợ</h4>
+                    <h4>Gửi Ngân Hàng <br><span style="font-size:0.6rem; font-weight:normal;" id="ui-bank-rate">(Lãi: 5%/năm)</span></h4>
+                    <p id="ui-bank" class="money-positive">$0</p>
+                </div>
+                <div class="dash-card">
+                    <h4>Đầu tư Cổ Phiếu</h4>
+                    <p id="ui-stocks" class="money-positive">$0</p>
+                </div>
+                <div class="dash-card">
+                    <h4>Khoản Nợ</h4>
                     <p id="ui-debt" class="money-negative">$0</p>
-                </div>
-                <div class="dash-card">
-                    <h4>Lương (Năm)</h4>
-                    <p id="ui-salary" class="money-positive">$0</p>
-                </div>
-                <div class="dash-card">
-                    <h4>Học / Làm việc</h4>
-                    <p id="ui-career" style="font-size: 0.9rem;">Không có</p>
                 </div>
             </div>
 
-            <h4 style="margin-top: 15px;">Kinh tế vĩ mô</h4>
-            <div style="font-size: 0.85rem; display: flex; justify-content: space-between;">
-                <span>Lạm phát:</span> <span id="ui-inflation">2.0%</span>
-            </div>
-            <div style="font-size: 0.85rem; display: flex; justify-content: space-between; margin-bottom: 15px;">
-                <span>Thị trường chứng khoán:</span> <span id="ui-market" style="color:var(--accent-green);">Tăng Trưởng (Bull)</span>
+            <div style="font-size: 0.85rem; background: var(--bg-base); padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid var(--bg-card);">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span style="color:var(--text-muted);">Việc làm:</span> <span id="ui-career" style="font-weight:bold;">Thất nghiệp</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color:var(--text-muted);">Lương / Năm:</span> <span id="ui-salary" style="color:var(--accent-green);">$0</span>
+                </div>
             </div>
 
             <h4>Hoạt Động Hiện Tại Của AI</h4>
@@ -229,9 +227,6 @@
                 <div class="action-btn" id="btn-socialize">Xã Giao</div>
                 <div class="action-btn" id="btn-health">Tập Thể Dục</div>
             </div>
-            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px; text-align: center;">
-                *Các nút này chỉ để hiển thị Trạng Thái, bạn không thể bấm.
-            </p>
         </div>
     </main>
 
@@ -243,16 +238,15 @@
             API_URL: "https://platform.beeknoee.com/v1/chat/completions",
             MODEL: "glm-4.5-flash", 
             DEFAULT_KEY: "sk-bee-dc788ea445cc467395eec20d894d19a1aae282f43f5dff81c68d14d8df7ded0d",
-            TICK_RATE: 1000, // 1 Tick = 1 Giây thực tế
-            SECONDS_PER_YEAR: 30, // 30 giây = 1 Năm
+            TICK_RATE: 1000, 
+            SECONDS_PER_YEAR: 30, 
             START_YEAR: 2024,
-            SAVE_KEY: "ai_life_sim_30s_v2_beeknoee" // Đổi tên file save để ko bị lỗi với bản cũ
+            SAVE_KEY: "ai_life_sim_v3_economy"
         };
 
         const Utils = {
-            formatMoney: (num) => `$${Math.round(num).toLocaleString()}`,
+            formatMoney: (num) => `$${Math.floor(num).toLocaleString()}`,
             randomInt: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
-            uuid: () => Math.random().toString(36).substring(2, 9),
             clamp: (val, min, max) => Math.max(min, Math.min(max, val))
         };
 
@@ -263,33 +257,32 @@
             apiKey: CONSTANTS.DEFAULT_KEY,
             generation: 1,
             time: { year: CONSTANTS.START_YEAR, yearProgress: 0 },
-            world: { weather: "Nắng", inflation: 2.0, marketTrend: "Bull" },
+            world: { 
+                weather: "Nắng", 
+                economyPhase: "Phục Hồi", // Phục Hồi -> Tăng Trưởng -> Bong Bóng -> Suy Thoái
+                cycleYearsLeft: 3,
+                bankInterestRate: 0.05, // 5% / năm
+                marketIndex: 1000 
+            },
             person: {
                 name: "Alpha", age: 1, lifeStage: "Sơ sinh", personality: "", avatar: "👶",
-                stats: { health: 100, energy: 100, stress: 0, mood: 100 },
+                stats: { health: 100, stress: 0, mood: 100 },
                 macroFocus: "rest"
             },
             finances: { money: 0, bank: 0, debt: 0, stocks: 0, yearlySalary: 0, yearlyExpenses: 2000 },
             career: { title: "Không có", isEmployed: false, isStudent: false },
             relationships: [],
+            history: { market: [1000] },
             flags: { hasPartner: false, hasKids: 0, isThinking: false }
         };
 
         const CAREERS = [
-            { title: "Phục Vụ Bàn", salary: 15000, stress: 30 },
-            { title: "Nhân Viên Bán Hàng", salary: 20000, stress: 35 },
-            { title: "Nhân Viên Văn Phòng", salary: 35000, stress: 25 },
-            { title: "Lập Trình Viên Junior", salary: 60000, stress: 50 },
-            { title: "Lập Trình Viên Senior", salary: 120000, stress: 65 },
-            { title: "Quản Lý", salary: 90000, stress: 70 },
-            { title: "Giám Đốc (CEO)", salary: 300000, stress: 90 }
+            { title: "Phục Vụ Bàn", salary: 15000, stress: 30 }, { title: "Nhân Viên Bán Hàng", salary: 20000, stress: 35 },
+            { title: "Nhân Viên Văn Phòng", salary: 35000, stress: 25 }, { title: "Lập Trình Viên", salary: 60000, stress: 50 },
+            { title: "Trưởng Phòng", salary: 90000, stress: 70 }, { title: "Giám Đốc (CEO)", salary: 300000, stress: 90 }
         ];
 
-        const PERSONALITY_TRAITS = [
-            "Hướng nội, Tiết kiệm, An Toàn", "Hướng ngoại, Bốc đồng, Thích rủi ro",
-            "Tham vọng, Tập trung sự nghiệp, Dễ căng thẳng", "Thoải mái, Hướng về gia đình, Lạc quan",
-            "Sáng tạo, Lộn xộn, Hào phóng", "Phân tích, Bi quan, Kiên nhẫn"
-        ];
+        const PERSONALITIES = ["Hướng nội, Tiết kiệm", "Hướng ngoại, Thích rủi ro", "Tham vọng, Dễ stress", "Thoải mái, Lạc quan", "Kiên nhẫn, Thích Đầu tư"];
 
         /******************************************************************
          * UI CONTROLLER
@@ -297,15 +290,24 @@
         class UI {
             static get(id) { return document.getElementById(id); }
 
+            static initChart() {
+                this.ctx = this.get('chart-market').getContext('2d');
+            }
+
             static updateAll() {
                 this.get('ui-year').innerText = state.time.year;
-                this.get('ui-weather').innerText = state.world.weather;
-                this.get('ui-generation').innerText = state.generation;
                 
+                // Color code economy phase
+                const phaseColors = {"Phục Hồi": "var(--accent-blue)", "Tăng Trưởng": "var(--accent-green)", "Bong Bóng": "var(--accent-yellow)", "Suy Thoái": "var(--accent-red)"};
+                const phaseEl = this.get('ui-economy-phase');
+                phaseEl.innerText = state.world.economyPhase;
+                phaseEl.style.color = phaseColors[state.world.economyPhase];
+
+                this.get('ui-generation').innerText = state.generation;
                 this.get('ui-year-timer').innerText = `Năm nay: ${state.time.yearProgress} / 30s`;
                 this.get('bar-year').style.width = `${(state.time.yearProgress / CONSTANTS.SECONDS_PER_YEAR) * 100}%`;
 
-                this.get('ai-status-text').innerText = state.flags.isThinking ? "Đang Suy Nghĩ Kế Hoạch..." : "Đang Thực Hiện Kế Hoạch";
+                this.get('ai-status-text').innerText = state.flags.isThinking ? "Đang Lập Kế Hoạch..." : "Đang Sống";
                 this.get('ai-indicator').className = `indicator ${state.flags.isThinking ? 'active' : ''}`;
 
                 this.get('ui-name').innerText = state.person.name;
@@ -316,15 +318,19 @@
                 
                 const s = state.person.stats;
                 this.get('ui-val-health').innerText = Math.round(s.health) + "%"; this.get('bar-health').style.width = s.health + "%";
-                this.get('ui-val-energy').innerText = Math.round(s.energy) + "%"; this.get('bar-energy').style.width = s.energy + "%";
                 this.get('ui-val-stress').innerText = Math.round(s.stress) + "%"; this.get('bar-stress').style.width = s.stress + "%";
                 this.get('ui-val-mood').innerText = Math.round(s.mood) + "%"; this.get('bar-mood').style.width = s.mood + "%";
 
-                this.get('ui-money').innerText = Utils.formatMoney(state.finances.money + state.finances.bank);
+                this.get('ui-money').innerText = Utils.formatMoney(state.finances.money);
+                this.get('ui-bank').innerText = Utils.formatMoney(state.finances.bank);
+                this.get('ui-stocks').innerText = Utils.formatMoney(state.finances.stocks);
                 this.get('ui-debt').innerText = Utils.formatMoney(state.finances.debt);
+                
+                this.get('ui-bank-rate').innerText = `(Lãi: ${(state.world.bankInterestRate * 100).toFixed(1)}%/năm)`;
+                this.get('ui-market-points').innerText = `${Math.round(state.world.marketIndex)} pts`;
+
                 this.get('ui-salary').innerText = Utils.formatMoney(state.finances.yearlySalary);
                 this.get('ui-career').innerText = state.career.isStudent ? "Sinh Viên Đại Học" : (state.career.isEmployed ? state.career.title : "Thất nghiệp");
-                this.get('ui-market').innerText = state.world.marketTrend === "Bull" ? "Tăng (Bull)" : "Giảm (Bear)";
 
                 document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('active'));
                 const btnMap = { "study": "btn-study", "work": "btn-work", "rest": "btn-rest", "invest": "btn-invest", "socialize": "btn-socialize", "health": "btn-health" };
@@ -336,17 +342,57 @@
                 state.relationships.forEach(rel => {
                     relContainer.innerHTML += `
                         <div style="background:var(--bg-card); padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
-                            <span>${rel.name} (${rel.type})</span>
-                            <span style="color:var(--accent-red);">Tim: ${Math.round(rel.trust)}%</span>
+                            <span>${rel.name}</span><span style="color:var(--accent-red);">❤ ${Math.round(rel.trust)}%</span>
                         </div>`;
                 });
+            }
+
+            static drawMarketChart() {
+                if(!this.ctx) return;
+                const data = state.history.market;
+                const canvas = this.ctx.canvas;
+                
+                // Fix canvas blur resolution
+                canvas.width = canvas.parentElement.clientWidth - 20;
+                canvas.height = 100;
+
+                this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if(data.length < 2) return;
+                
+                const max = Math.max(...data, 1100);
+                const min = Math.min(...data, 900);
+                const range = max - min;
+                
+                this.ctx.beginPath();
+                this.ctx.lineWidth = 2;
+                
+                // Color based on latest trend
+                const isUp = data[data.length-1] >= data[data.length-2];
+                this.ctx.strokeStyle = isUp ? '#10b981' : '#ef4444'; // Green if up, Red if down
+                
+                const step = canvas.width / (Math.max(data.length - 1, 10)); // keep min 10 points grid
+                
+                // Draw line
+                data.forEach((val, i) => {
+                    const x = i * step;
+                    const y = canvas.height - ((val - min) / (range || 1)) * canvas.height;
+                    if(i === 0) this.ctx.moveTo(x, y);
+                    else this.ctx.lineTo(x, y);
+                });
+                this.ctx.stroke();
+
+                // Add gradient fill
+                this.ctx.lineTo((data.length - 1) * step, canvas.height);
+                this.ctx.lineTo(0, canvas.height);
+                this.ctx.fillStyle = isUp ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                this.ctx.fill();
             }
 
             static logSystemEvent(text, type = "normal") {
                 const container = this.get('ui-timeline');
                 const div = document.createElement('div');
                 div.className = `event-card ${type}`;
-                div.innerHTML = `<div class="event-time">Tuổi ${state.person.age} (Năm ${state.time.year})</div>${text}`;
+                div.innerHTML = `<div class="event-time">Tuổi ${state.person.age}</div>${text}`;
                 container.appendChild(div);
                 container.scrollTop = container.scrollHeight;
             }
@@ -355,10 +401,7 @@
                 const container = this.get('ui-ai-chat');
                 const div = document.createElement('div');
                 div.className = 'chat-message';
-                div.innerHTML = `
-                    <div class="chat-meta">Tuổi ${state.person.age} (Năm ${state.time.year})</div>
-                    <div class="chat-bubble">"${thought}"</div>
-                `;
+                div.innerHTML = `<div class="chat-meta">Tuổi ${state.person.age}</div><div class="chat-bubble">"${thought}"</div>`;
                 container.appendChild(div);
                 container.scrollTop = container.scrollHeight;
             }
@@ -373,18 +416,19 @@
                 state.flags.isThinking = true;
                 UI.updateAll();
 
-                const systemPrompt = `Bạn đang chơi game Mô Phỏng Cuộc Đời. Đóng vai: ${state.person.name}, Tuổi: ${state.person.age} (${state.person.lifeStage}).
+                const systemPrompt = `Bạn đang đóng vai: ${state.person.name}, Tuổi: ${state.person.age} (${state.person.lifeStage}).
 Tính cách: ${state.person.personality}.
 Sức khỏe: ${Math.round(state.person.stats.health)}/100, Căng thẳng: ${Math.round(state.person.stats.stress)}/100.
-Tiền $${Math.round(state.finances.money + state.finances.bank)}, Nợ $${Math.round(state.finances.debt)}.
+Tài sản: Tiền Mặt $${Math.round(state.finances.money)}, Ngân Hàng $${Math.round(state.finances.bank)}, Cổ Phiếu $${Math.round(state.finances.stocks)}, Nợ $${Math.round(state.finances.debt)}.
 Nghề: ${state.career.isEmployed ? state.career.title : "Thất nghiệp"}. Lương: $${state.finances.yearlySalary}.
+Thị trường: Đang ${state.world.economyPhase}.
 
-Lên kế hoạch cho năm nay. Chọn 1 'macro_focus' (trọng tâm) từ: "study", "work", "rest", "invest", "socialize", "health".
-Chọn 1 'major_action' (hành động lớn): "apply_job", "quit_job", "university", "propose", "have_child", "none".
+Lên kế hoạch năm nay. Chọn 1 'macro_focus' từ: "study", "work", "rest", "invest" (Dành tiền mua cổ phiếu), "bank" (Gửi tiết kiệm), "socialize", "health".
+Chọn 1 'major_action': "apply_job", "quit_job", "university", "propose", "have_child", "none".
 
-Trả về CHỈ ĐỊNH DẠNG JSON:
+Trả về JSON:
 {
-    "thought": "Suy nghĩ bằng tiếng Việt, giải thích lý do chọn.",
+    "thought": "Suy nghĩ bằng tiếng Việt, giải thích lý do đầu tư hay gửi ngân hàng, làm việc hay nghỉ ngơi.",
     "macro_focus": "chosen_focus",
     "major_action": "chosen_action"
 }`;
@@ -395,103 +439,75 @@ Trả về CHỈ ĐỊNH DẠNG JSON:
                         headers: { "Authorization": `Bearer ${state.apiKey}`, "Content-Type": "application/json" },
                         body: JSON.stringify({
                             model: CONSTANTS.MODEL,
-                            messages: [
-                                { role: "system", content: systemPrompt },
-                                { role: "user", content: "Đưa ra quyết định cho năm nay." }
-                            ],
+                            messages: [{ role: "system", content: systemPrompt }],
                             temperature: 0.7
                         })
                     });
 
                     const data = await response.json();
-                    
-                    if (data.error) {
-                        console.warn("API Error:", data.error.message);
-                        UI.logSystemEvent("Hệ thống AI đang phản hồi chậm. Kích hoạt bản năng sinh tồn...", "critical");
-                        state.flags.isThinking = false;
-                        return this.getFallbackDecision();
-                    }
-
-                    if (!data.choices || !data.choices[0]) {
-                        state.flags.isThinking = false;
-                        return this.getFallbackDecision();
-                    }
+                    if (data.error) throw new Error(data.error.message);
 
                     let content = data.choices[0].message.content;
-                    
                     const jsonStart = content.indexOf('{');
                     const jsonEnd = content.lastIndexOf('}');
-                    if(jsonStart !== -1 && jsonEnd !== -1) {
-                        content = content.substring(jsonStart, jsonEnd + 1);
-                    }
+                    if(jsonStart !== -1 && jsonEnd !== -1) content = content.substring(jsonStart, jsonEnd + 1);
 
                     const parsed = JSON.parse(content);
                     state.flags.isThinking = false;
                     return parsed;
 
                 } catch (error) {
-                    console.error("Lỗi Parsing hoặc Mạng:", error);
-                    UI.logSystemEvent("Lỗi kết nối AI. Giữ nguyên nhịp sống cũ năm nay.", "critical");
+                    console.error("AI Error:", error);
                     state.flags.isThinking = false;
-                    UI.updateAll();
-                    return this.getFallbackDecision();
+                    return { thought: "Đầu óc trống rỗng quá, cứ sống qua ngày vậy...", macro_focus: "work", major_action: "none" };
                 }
-            }
-
-            static getFallbackDecision() {
-                let autoFocus = state.person.macroFocus || "work";
-                let autoAction = "none";
-
-                if (state.person.stats.stress > 80) autoFocus = "rest";
-                if (state.finances.money < 0 && !state.career.isEmployed && state.person.age >= 18) autoAction = "apply_job";
-
-                return {
-                    thought: "(Hệ thống AI gián đoạn) Chắc năm nay mình cứ cố gắng sinh tồn qua ngày thôi...",
-                    macro_focus: autoFocus,
-                    major_action: autoAction
-                };
             }
 
             static processDecision(decision) {
                 if(!decision) return;
                 
                 if(decision.thought) UI.logAIChat(decision.thought);
-                if(decision.macro_focus) state.person.macroFocus = decision.macro_focus;
+                
+                // Ánh xạ focus mới "bank" vào biến hệ thống
+                let focus = decision.macro_focus;
+                if(focus === "bank") focus = "invest"; // Chung logic xử lý dòng tiền
+                state.person.macroFocus = focus;
+                
+                // Phân bổ dòng tiền nếu AI muốn đầu tư / tiết kiệm ngay đầu năm
+                if(decision.macro_focus === "invest" && state.finances.money > 1000) {
+                    let amount = state.finances.money * 0.5; // Dành 50% tiền mặt mua cổ phiếu
+                    state.finances.money -= amount;
+                    state.finances.stocks += amount;
+                    UI.logSystemEvent(`Đã dùng $${Utils.formatMoney(amount)} mua cổ phiếu.`, "normal");
+                } else if(decision.macro_focus === "bank" && state.finances.money > 1000) {
+                    let amount = state.finances.money * 0.5; // Dành 50% tiền gửi NH an toàn
+                    state.finances.money -= amount;
+                    state.finances.bank += amount;
+                    UI.logSystemEvent(`Đã gửi $${Utils.formatMoney(amount)} vào ngân hàng ăn lãi.`, "normal");
+                }
 
                 const action = decision.major_action;
                 if(action === "apply_job" && state.person.age >= 16 && !state.career.isEmployed) {
                     const job = CAREERS[Utils.randomInt(0, Math.min(CAREERS.length-1, Math.floor(state.person.age/10)))];
-                    state.career.isEmployed = true; state.career.title = job.title; 
-                    state.finances.yearlySalary = job.salary; state.career.isStudent = false;
-                    UI.logSystemEvent(`Đã xin việc thành công: ${job.title}! Lương $${job.salary}/năm.`);
+                    state.career.isEmployed = true; state.career.title = job.title; state.finances.yearlySalary = job.salary;
+                    UI.logSystemEvent(`Đã xin việc: ${job.title}! Lương $${job.salary}/năm.`);
                 } else if(action === "quit_job" && state.career.isEmployed) {
                     state.career.isEmployed = false; state.career.title = "Không có"; state.finances.yearlySalary = 0;
-                    UI.logSystemEvent("Đã nộp đơn xin nghỉ việc.");
-                } else if(action === "university" && state.person.age >= 18 && !state.career.isStudent) {
-                    if(state.finances.money + state.finances.bank > 30000) {
-                        state.finances.money -= 30000; state.career.isStudent = true;
-                        UI.logSystemEvent("Đăng ký vào Đại Học (Đóng học phí bằng tiền mặt).");
-                    } else {
-                        state.finances.debt += 40000; state.career.isStudent = true;
-                        UI.logSystemEvent("Vay tín dụng sinh viên ($40,000) để học Đại Học.");
-                    }
+                    UI.logSystemEvent("Đã nộp đơn nghỉ việc.");
                 } else if(action === "propose" && state.person.age >= 18 && !state.flags.hasPartner) {
                     state.flags.hasPartner = true;
-                    UI.logSystemEvent("Đã cầu hôn và kết hôn! 💍 🎉", "critical");
-                    state.relationships.push({ name: `Vợ/Chồng`, type: "Spouse", trust: 100 });
-                } else if(action === "have_child" && state.flags.hasPartner && state.person.age > 20) {
-                    state.flags.hasKids++; state.finances.yearlyExpenses += 5000; 
-                    UI.logSystemEvent(`Vợ chồng vừa sinh em bé! (Tổng số con: ${state.flags.hasKids}) 👶`, "critical");
-                    state.relationships.push({ name: `Con thứ ${state.flags.hasKids}`, type: "Child", trust: 100 });
+                    UI.logSystemEvent("Đã kết hôn! 💍 🎉", "critical");
+                    state.relationships.push({ name: `Vợ/Chồng`, trust: 100 });
                 }
             }
         }
 
         /******************************************************************
-         * SIMULATION ENGINE
+         * SIMULATION & ECONOMY ENGINE
          ******************************************************************/
         class SimulationEngine {
             static start() {
+                UI.initChart();
                 if(this.interval) clearInterval(this.interval);
                 this.interval = setInterval(() => this.tick(), CONSTANTS.TICK_RATE); 
                 UI.logSystemEvent("Mô phỏng bắt đầu.");
@@ -504,8 +520,10 @@ Trả về CHỈ ĐỊNH DẠNG JSON:
                 if(state.flags.isThinking) return; 
 
                 state.time.yearProgress++;
-                this.applySecondFraction();
+                this.applyEconomyPerSecond(); // Xử lý kinh tế liên tục
+                
                 UI.updateAll();
+                UI.drawMarketChart();
 
                 if(state.time.yearProgress >= CONSTANTS.SECONDS_PER_YEAR) {
                     state.time.yearProgress = 0;
@@ -515,82 +533,100 @@ Trả về CHỈ ĐỊNH DẠNG JSON:
                 }
             }
 
-            static applySecondFraction() {
-                const s = state.person.stats;
+            // Động cơ kinh tế chạy từng giây
+            static applyEconomyPerSecond() {
+                const w = state.world;
                 const f = state.finances;
 
-                if(state.career.isEmployed) f.money += (f.yearlySalary / 30);
-                let livingCost = state.person.age >= 18 ? 15000 : 0; 
-                f.money -= ((livingCost + f.yearlyExpenses) / 30);
+                // 1. Lãi suất Ngân hàng (Tính theo giây sinh lời kép)
+                const interestPerSecond = w.bankInterestRate / CONSTANTS.SECONDS_PER_YEAR;
+                if(f.bank > 0) f.bank += f.bank * interestPerSecond;
 
+                // 2. Dao động Chứng khoán (Stocks)
+                let baseTrend = 0; 
+                let volatility = (Math.random() - 0.5) * 0.02; // Chớp nhoáng +/- 1% mỗi giây
+
+                // Áp lực xu hướng tuỳ chu kỳ
+                if(w.economyPhase === "Phục Hồi") baseTrend = 0.05; // Tổng +5% năm
+                if(w.economyPhase === "Tăng Trưởng") baseTrend = 0.15; // Tổng +15% năm
+                if(w.economyPhase === "Bong Bóng") { baseTrend = 0.25; volatility *= 2; } // +25% nhưng giật mạnh
+                if(w.economyPhase === "Suy Thoái") { baseTrend = -0.15; volatility *= 1.5; } // Rớt -15%
+
+                let dailyGrowth = (baseTrend / CONSTANTS.SECONDS_PER_YEAR) + volatility;
+                
+                // Áp dụng vào Index và Tài sản AI
+                w.marketIndex += w.marketIndex * dailyGrowth;
+                if(f.stocks > 0) f.stocks += f.stocks * dailyGrowth;
+
+                // 3. Thu nhập & Chi phí rải đều
+                if(state.career.isEmployed) f.money += (f.yearlySalary / CONSTANTS.SECONDS_PER_YEAR);
+                let livingCost = state.person.age >= 18 ? 15000 : 0; 
+                f.money -= ((livingCost + f.yearlyExpenses) / CONSTANTS.SECONDS_PER_YEAR);
+
+                // 4. Trả Nợ / Tăng Nợ (Nợ lãi cao hơn lãi ngân hàng 5%)
+                const debtInterest = (w.bankInterestRate + 0.05) / CONSTANTS.SECONDS_PER_YEAR;
                 if(f.debt > 0) {
-                    f.debt += (f.debt * 0.10) / 30;
+                    f.debt += f.debt * debtInterest;
                     if(f.money > 0) { 
-                        const repay = Math.min(f.money, (f.debt * 0.2)/30); 
+                        const repay = Math.min(f.money, (f.debt * 0.2)/CONSTANTS.SECONDS_PER_YEAR); 
                         f.money -= repay; f.debt -= repay;
                     }
                 } else if(f.money < 0) {
                     f.debt += Math.abs(f.money); f.money = 0; 
                 }
 
-                if(state.person.age < 4) {
-                    s.health += (5 / 30); 
-                } else if(state.person.age >= 4 && state.person.age < 18) {
-                    s.stress += (10 / 30); 
-                } else {
-                    switch(state.person.macroFocus) {
-                        case "work": s.stress += (20/30); s.mood -= (10/30); break;
-                        case "study": s.stress += (15/30); break;
-                        case "rest": s.stress -= (30/30); s.health += (10/30); s.mood += (20/30); break;
-                        case "health": s.health += (20/30); s.stress -= (10/30); break;
-                        case "socialize": s.mood += (30/30); s.stress -= (5/30); break;
-                        case "invest": s.stress += (5/30); break;
-                    }
-                }
-
+                // 5. Thể chất AI
+                const s = state.person.stats;
+                if(state.person.macroFocus === "work") s.stress += (15/30);
+                if(state.person.macroFocus === "rest") { s.stress -= 1; s.health += (5/30); }
                 if(s.stress > 85) s.health -= (10/30);
                 if(s.stress < 20) s.health += (5/30);
                 if(state.person.age > 45) s.health -= ((state.person.age - 40) * 1.5) / 30; 
                 
                 s.health = Utils.clamp(s.health, 0, 100);
-                s.energy = 100; 
                 s.stress = Utils.clamp(s.stress, 0, 100);
-                s.mood = Utils.clamp(s.mood, 0, 100);
-
                 if(s.health <= 0) this.handleDeath();
             }
 
+            // Cập nhật Chu kỳ Kinh tế hàng năm
+            static updateEconomyCycle() {
+                state.world.cycleYearsLeft--;
+                if(state.world.cycleYearsLeft <= 0) {
+                    // Chuyển giai đoạn
+                    const phases = ["Phục Hồi", "Tăng Trưởng", "Bong Bóng", "Suy Thoái"];
+                    let currentIndex = phases.indexOf(state.world.economyPhase);
+                    let nextIndex = (currentIndex + 1) % phases.length;
+                    
+                    state.world.economyPhase = phases[nextIndex];
+                    state.world.cycleYearsLeft = Utils.randomInt(3, 7); // Mỗi chu kỳ kéo dài 3-7 năm
+
+                    // Điều chỉnh Lãi suất ngân hàng theo Nhà Nước (Chống lạm phát / Cứu nền kinh tế)
+                    if(state.world.economyPhase === "Tăng Trưởng") state.world.bankInterestRate = 0.06;
+                    if(state.world.economyPhase === "Bong Bóng") state.world.bankInterestRate = 0.09; // Lãi cao hút tiền về
+                    if(state.world.economyPhase === "Suy Thoái") state.world.bankInterestRate = 0.02; // Hạ lãi suất kích cầu
+                    if(state.world.economyPhase === "Phục Hồi") state.world.bankInterestRate = 0.04;
+
+                    UI.logSystemEvent(`Nền kinh tế bước vào giai đoạn: ${state.world.economyPhase.toUpperCase()}!`, "critical");
+                }
+                
+                // Lưu mốc vẽ biểu đồ
+                state.history.market.push(state.world.marketIndex);
+                if(state.history.market.length > 50) state.history.market.shift(); // Giữ 50 điểm trên chart
+            }
+
             static async triggerNewYear() {
-                if(state.person.age === 4) { state.person.lifeStage = "Trẻ em"; state.person.avatar = "👦"; }
-                if(state.person.age === 13) { state.person.lifeStage = "Tuổi Teen"; state.person.avatar = "🧑"; }
-                if(state.person.age === 18) { state.person.lifeStage = "Thanh niên"; state.person.avatar = "👨"; }
-                if(state.person.age === 40) { state.person.lifeStage = "Trung niên"; }
-                if(state.person.age === 65) { state.person.lifeStage = "Người già"; state.person.avatar = "👴"; UI.logSystemEvent("Đã đến tuổi nghỉ hưu."); }
+                if(state.person.age === 4) state.person.lifeStage = "Trẻ em";
+                if(state.person.age === 18) state.person.lifeStage = "Thanh niên";
+                if(state.person.age === 65) { state.person.lifeStage = "Người già"; UI.logSystemEvent("Đã đến tuổi nghỉ hưu."); }
                 
                 if(state.person.age === 100) { this.handleDeath(); return; }
 
                 UI.logSystemEvent(`🎉 Chúc mừng sinh nhật Tuổi ${state.person.age}!`);
-
-                if(Math.random() < 0.3) this.generateRandomEvent();
-                localStorage.setItem(CONSTANTS.SAVE_KEY, JSON.stringify(state));
+                
+                this.updateEconomyCycle(); // Tính lại quy luật vĩ mô năm nay
 
                 const plan = await AI.requestYearlyPlan();
                 AI.processDecision(plan);
-            }
-
-            static generateRandomEvent() {
-                const r = Math.random();
-                if(r < 0.2) {
-                    state.world.marketTrend = state.world.marketTrend === "Bull" ? "Bear" : "Bull";
-                    UI.logSystemEvent(`Chứng khoán chuyển sang thị trường ${state.world.marketTrend}!`, "critical");
-                } else if(r < 0.4 && state.career.isEmployed) {
-                    state.finances.yearlySalary *= 1.15;
-                    UI.logSystemEvent("Được thăng chức / tăng lương 15%!", "normal");
-                } else if (r < 0.6 && state.person.stats.health < 60) {
-                    state.person.stats.health -= 20;
-                    state.finances.debt += 10000;
-                    UI.logSystemEvent("Bệnh nặng nhập viện! Mắc nợ viện phí $10,000.", "critical");
-                }
             }
 
             static handleDeath() {
@@ -605,14 +641,12 @@ Trả về CHỈ ĐỊNH DẠNG JSON:
                     state.time.yearProgress = 0;
                     state.person = {
                         name: `Hậu duệ Đời ${state.generation}`, age: 1, lifeStage: "Sơ sinh",
-                        personality: PERSONALITY_TRAITS[Math.floor(Math.random() * PERSONALITY_TRAITS.length)],
-                        avatar: "👶", stats: { health: 100, energy: 100, stress: 0, mood: 100 },
-                        macroFocus: "rest"
+                        personality: PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)],
+                        avatar: "👶", stats: { health: 100, stress: 0, mood: 100 }, macroFocus: "rest"
                     };
                     state.finances = { money: inheritance, bank: 0, debt: 0, stocks: 0, yearlySalary: 0, yearlyExpenses: 2000 };
                     state.career = { title: "Không có", isEmployed: false, isStudent: false };
                     state.relationships = [];
-                    state.flags = { hasPartner: false, hasKids: 0, isThinking: false };
                     
                     UI.logSystemEvent(`Đời thứ ${state.generation} bắt đầu. Kế thừa $${Utils.formatMoney(inheritance)}.`, "critical");
                     this.start();
@@ -620,33 +654,13 @@ Trả về CHỈ ĐỊNH DẠNG JSON:
             }
         }
 
-        /******************************************************************
-         * INITIALIZATION
-         ******************************************************************/
-        function initApp() {
-            document.getElementById('api-key-input').value = CONSTANTS.DEFAULT_KEY;
-
-            const savedData = localStorage.getItem(CONSTANTS.SAVE_KEY);
-            if(savedData) {
-                try {
-                    const parsed = JSON.parse(savedData);
-                    state = { ...state, ...parsed };
-                    // Luôn ghi đè key mặc định để ngừa lỗi cache key cũ
-                    state.apiKey = CONSTANTS.DEFAULT_KEY; 
-                    document.getElementById('save-found-msg').style.display = 'block';
-                } catch(e) {}
-            }
-
+        window.onload = () => {
             document.getElementById('start-btn').addEventListener('click', () => {
-                if(!state.person.personality) {
-                    state.person.personality = PERSONALITY_TRAITS[Math.floor(Math.random() * PERSONALITY_TRAITS.length)];
-                }
+                if(!state.person.personality) state.person.personality = PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)];
                 document.getElementById('setup-modal').style.display = 'none';
                 SimulationEngine.start();
             });
-        }
-
-        window.onload = initApp;
+        };
     </script>
 </body>
 </html>
