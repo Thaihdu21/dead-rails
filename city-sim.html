@@ -1,703 +1,379 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Life Simulator: Economy & Stocks (OpenRouter)</title>
-    <style>
-        :root {
-            --bg-base: #0f172a;
-            --bg-panel: #1e293b;
-            --bg-card: #334155;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent-blue: #3b82f6;
-            --accent-green: #10b981;
-            --accent-red: #ef4444;
-            --accent-yellow: #f59e0b;
-            --accent-purple: #8b5cf6;
-            --border-radius: 12px;
-            --transition: 0.3s ease;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
-        
-        body { background-color: var(--bg-base); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        
-        /* Setup Modal */
-        #setup-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .setup-card { background: var(--bg-panel); padding: 30px; border-radius: var(--border-radius); width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .setup-card h2 { margin-bottom: 20px; color: var(--accent-blue); }
-        .setup-card input { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid var(--bg-card); background: var(--bg-base); color: white; outline: none; font-size: 0.8rem; color: var(--text-muted); }
-        .btn { padding: 10px 20px; background: var(--accent-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: var(--transition); width: 100%; }
-        .btn:hover { background: #2563eb; }
-
-        /* Header */
-        header { padding: 15px 30px; background: var(--bg-panel); display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--bg-card); }
-        .header-top { display: flex; justify-content: space-between; align-items: center; }
-        .world-clock { display: flex; gap: 20px; font-size: 1.1rem; }
-        .world-clock span { color: var(--accent-green); font-weight: bold; }
-        .api-status { font-size: 0.9rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
-        .indicator { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-yellow); }
-        .indicator.active { background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
-        
-        .year-progress-container { width: 100%; height: 6px; background: var(--bg-card); border-radius: 3px; overflow: hidden; position: relative; }
-        .year-progress-fill { height: 100%; background: var(--accent-blue); width: 0%; transition: width 1s linear; }
-        .year-label { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: var(--text-muted); }
-
-        /* Main Layout */
-        main { display: grid; grid-template-columns: 300px 1fr 350px; gap: 20px; padding: 20px; height: calc(100vh - 85px); }
-        .panel { background: var(--bg-panel); border-radius: var(--border-radius); padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: hidden; }
-        
-        .scrollable { overflow-y: auto; padding-right: 5px; }
-        .scrollable::-webkit-scrollbar { width: 6px; }
-        .scrollable::-webkit-scrollbar-thumb { background: var(--bg-card); border-radius: 10px; }
-
-        /* Profile & Stats */
-        .profile-header { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--bg-card); padding-bottom: 15px; }
-        .avatar { width: 60px; height: 60px; background: var(--bg-card); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; }
-        .profile-info h3 { color: var(--accent-blue); }
-        .profile-info p { font-size: 0.9rem; color: var(--text-muted); }
-
-        .stat-group { display: flex; flex-direction: column; gap: 5px; }
-        .stat-label { display: flex; justify-content: space-between; font-size: 0.85rem; }
-        .progress-bar { width: 100%; height: 8px; background: var(--bg-card); border-radius: 4px; overflow: hidden; }
-        .progress-fill { height: 100%; transition: width 0.3s ease; }
-        
-        .fill-health { background: var(--accent-green); }
-        .fill-energy { background: var(--accent-yellow); }
-        .fill-stress { background: var(--accent-red); }
-        .fill-mood { background: var(--accent-purple); }
-
-        /* Center Panel: Chat & System Log */
-        .center-layout { display: grid; grid-template-rows: 60% 40%; gap: 15px; height: 100%; }
-        .chat-box { background: var(--bg-base); border: 1px solid var(--bg-card); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .chat-message { display: flex; flex-direction: column; gap: 5px; animation: slideIn 0.3s ease; }
-        .chat-bubble { background: var(--bg-panel); padding: 12px 15px; border-radius: 12px; border-bottom-left-radius: 2px; font-size: 0.95rem; line-height: 1.4; border: 1px solid rgba(139, 92, 246, 0.3); }
-        .chat-meta { font-size: 0.75rem; color: var(--accent-purple); font-weight: bold; margin-left: 5px; }
-
-        .timeline-box { background: var(--bg-base); border: 1px solid var(--bg-card); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-        .event-card { background: var(--bg-card); padding: 10px; border-radius: 6px; font-size: 0.85rem; border-left: 3px solid var(--accent-blue); animation: slideIn 0.3s ease; }
-        .event-card.critical { border-left-color: var(--accent-red); background: rgba(239, 68, 68, 0.1); }
-        .event-time { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 2px; }
-
-        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-
-        /* Right Panel: Economy */
-        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .dash-card { background: var(--bg-card); padding: 10px; border-radius: 8px; text-align: center; }
-        .dash-card h4 { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 5px; }
-        .dash-card p { font-size: 1.05rem; font-weight: bold; }
-        .money-positive { color: var(--accent-green); }
-        .money-negative { color: var(--accent-red); }
-        .money-neutral { color: var(--accent-yellow); }
-
-        .chart-container { background: var(--bg-base); border: 1px solid var(--bg-card); border-radius: 8px; padding: 10px; height: 120px; display: flex; flex-direction: column; margin-bottom: 10px; }
-        .chart-container h4 { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px; display: flex; justify-content: space-between;}
-        canvas { width: 100%; height: 100%; }
-
-        .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
-        .action-btn { background: var(--bg-card); color: var(--text-main); border: 1px solid transparent; padding: 8px; border-radius: 6px; font-size: 0.8rem; pointer-events: none; text-align: center; }
-        .action-btn.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-    </style>
+<meta charset="UTF-8">
+<title>Mô Phỏng Cuộc Đời AI</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #eee; margin:0; padding:20px; }
+  .container { max-width: 900px; margin: auto; }
+  h1 { text-align:center; color:#6cf; }
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:20px; }
+  .card { background:#1a1d27; border-radius:12px; padding:16px; box-shadow:0 0 8px rgba(0,0,0,0.4); }
+  .bar-bg { background:#333; border-radius:8px; overflow:hidden; height:20px; margin-top:6px; }
+  .bar-fill { height:100%; transition: width 0.5s; }
+  .health .bar-fill { background: linear-gradient(90deg,#e33,#5f5); }
+  .money .bar-fill { background: linear-gradient(90deg,#f90,#ff0); }
+  .stress .bar-fill { background: linear-gradient(90deg,#5af,#a5f); }
+  #log { background:#111; border-radius:12px; padding:12px; height:220px; overflow-y:auto; font-size:14px; line-height:1.5; }
+  #log div { margin-bottom:8px; border-bottom:1px solid #222; padding-bottom:6px; }
+  .stat-label { font-size:13px; opacity:0.8; }
+  .stat-value { font-size:22px; font-weight:bold; }
+  button { background:#3a5; border:none; color:white; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:15px; margin:4px; }
+  button:hover { background:#4c6; }
+  button:disabled { background:#555; cursor:not-allowed; }
+  .controls { text-align:center; margin:16px 0; }
+  canvas { background:#1a1d27; border-radius:12px; }
+  .pie-wrap { display:flex; align-items:center; gap:16px; }
+  .legend div { display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:13px; }
+  .swatch { width:12px; height:12px; border-radius:3px; display:inline-block; }
+  .dead { color:#f55; font-weight:bold; }
+</style>
 </head>
 <body>
+<div class="container">
+  <h1>🧬 Mô Phỏng Cuộc Đời AI</h1>
+  <div class="controls">
+    <button id="startBtn">▶ Bắt đầu</button>
+    <button id="pauseBtn" disabled>⏸ Tạm dừng</button>
+    <button id="resetBtn">🔄 Reset</button>
+    <span id="genInfo" style="margin-left:12px; opacity:0.7;"></span>
+  </div>
 
-    <div id="setup-modal">
-        <div class="setup-card">
-            <h2>AI Life Simulator</h2>
-            <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted);">
-                <b>Tốc độ: 30 Giây = 1 Năm.</b><br>
-                Đã kích hoạt Chu kỳ Kinh tế vĩ mô & Chứng khoán.
-            </p>
-            <input type="password" id="api-key-input" placeholder="Nhập OpenRouter API Key...">
-            <button class="btn" id="start-btn">Bắt Đầu Cuộc Đời</button>
-        </div>
+  <div class="grid">
+    <div class="card">
+      <div class="stat-label">Tuổi</div>
+      <div class="stat-value" id="ageVal">1</div>
+      <div class="stat-label" style="margin-top:10px;">Trạng thái hiện tại</div>
+      <div class="stat-value" id="stateVal" style="font-size:16px;">Đang khởi tạo...</div>
     </div>
 
-    <header>
-        <div class="header-top">
-            <div class="world-clock">
-                <div>Năm: <span id="ui-year">2024</span></div>
-                <div>Kinh tế: <span id="ui-economy-phase" style="color:var(--accent-yellow);">Phục Hồi</span></div>
-            </div>
-            <div class="api-status">
-                Gen <span id="ui-generation" style="color:var(--accent-blue);font-weight:bold;">1</span>
-                | AI: <div class="indicator" id="ai-indicator"></div> <span id="ai-status-text">Đang Sống</span>
-            </div>
-        </div>
-        <div style="position: relative; margin-top: 10px;">
-            <div class="year-label" id="ui-year-timer">Năm nay: 0 / 30s</div>
-            <div class="year-progress-container">
-                <div class="year-progress-fill" id="bar-year"></div>
-            </div>
-        </div>
-    </header>
+    <div class="card">
+      <div class="money">
+        <div class="stat-label">💰 Tiền mặt: <span id="cashVal">0</span> VNĐ</div>
+      </div>
+      <div class="stat-label" style="margin-top:8px;">🏦 Tiết kiệm: <span id="savingsVal">0</span> VNĐ</div>
+      <div class="stat-label">📈 Chứng khoán: <span id="stockVal">0</span> VNĐ</div>
+      <div class="stat-label">🏧 Nợ ngân hàng: <span id="debtVal">0</span> VNĐ (lãi <span id="interestVal">0</span>%)</div>
+    </div>
 
-    <main>
-        <!-- Left Panel: Profile -->
-        <div class="panel scrollable">
-            <div class="profile-header">
-                <div class="avatar" id="ui-avatar">🧒</div>
-                <div class="profile-info">
-                    <h3 id="ui-name">AI Entity</h3>
-                    <p>Tuổi: <span id="ui-age">1</span> (<span id="ui-stage">Sơ sinh</span>)</p>
-                </div>
-            </div>
+    <div class="card health">
+      <div class="stat-label">❤️ Sức khỏe</div>
+      <div class="bar-bg"><div class="bar-fill" id="healthBar" style="width:100%;"></div></div>
+      <div class="stat-label" style="margin-top:4px;" id="healthPct">100%</div>
+    </div>
 
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px;">
-                <strong>Tính cách:</strong> <span id="ui-personality">Đang tạo...</span>
-            </div>
+    <div class="card stress">
+      <div class="stat-label">😵 Căng thẳng / Áp lực</div>
+      <div class="bar-bg"><div class="bar-fill" id="stressBar" style="width:0%;"></div></div>
+      <div class="stat-label" style="margin-top:4px;" id="stressPct">0%</div>
+    </div>
+  </div>
 
-            <h4 style="margin-top: 10px;">Chỉ số sống</h4>
-            <div class="stat-group">
-                <div class="stat-label"><span>Sức Khỏe</span> <span id="ui-val-health">100%</span></div>
-                <div class="progress-bar"><div class="progress-fill fill-health" id="bar-health" style="width: 100%"></div></div>
-            </div>
-            <div class="stat-group">
-                <div class="stat-label"><span>Căng Thẳng</span> <span id="ui-val-stress">0%</span></div>
-                <div class="progress-bar"><div class="progress-fill fill-stress" id="bar-stress" style="width: 0%"></div></div>
-            </div>
-            <div class="stat-group">
-                <div class="stat-label"><span>Tâm Trạng</span> <span id="ui-val-mood">100%</span></div>
-                <div class="progress-bar"><div class="progress-fill fill-mood" id="bar-mood" style="width: 100%"></div></div>
-            </div>
+  <div class="card" style="margin-top:16px;">
+    <div class="pie-wrap">
+      <canvas id="pieChart" width="180" height="180"></canvas>
+      <div class="legend" id="pieLegend"></div>
+    </div>
+  </div>
 
-            <h4 style="margin-top: 15px;">Các mối quan hệ</h4>
-            <div id="ui-relationships" style="display:flex; flex-direction:column; gap:5px; font-size:0.85rem;"></div>
-        </div>
+  <div class="card" style="margin-top:16px;">
+    <div class="stat-label">📜 Nhật ký cuộc đời</div>
+    <div id="log"></div>
+  </div>
+</div>
 
-        <!-- Center Panel: AI Thoughts & System Events -->
-        <div class="center-layout">
-            <div class="panel" style="padding: 0;">
-                <h4 style="padding: 15px 15px 5px 15px; color: var(--accent-purple); border-bottom: 1px solid var(--bg-card);">🧠 Tâm Trí & Quyết Định của AI</h4>
-                <div class="chat-box scrollable" id="ui-ai-chat" style="flex: 1; border: none; border-radius: 0;"></div>
-            </div>
-            <div class="panel" style="padding: 0;">
-                <h4 style="padding: 15px 15px 5px 15px; border-bottom: 1px solid var(--bg-card);">📜 Nhật Ký Sự Kiện Cuộc Đời</h4>
-                <div class="timeline-box scrollable" id="ui-timeline" style="flex: 1; border: none; border-radius: 0;"></div>
-            </div>
-        </div>
+<script>
+// ====== CẤU HÌNH ======
+const GROQ_API_KEY = "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"; // <-- thay bằng key thật
+const GROQ_MODEL = "openai/gpt-oss-20b";
+const TICK_MS = 30000; // 30s = 1 năm
 
-        <!-- Right Panel: Economy & Market -->
-        <div class="panel scrollable">
-            
-            <div class="chart-container">
-                <h4>
-                    <span>📈 Chỉ số VN-Index</span>
-                    <span id="ui-market-points" style="color:var(--accent-green);">1000 pts</span>
-                </h4>
-                <canvas id="chart-market"></canvas>
-            </div>
+// ====== STATE ======
+let state = {
+  generation: 1,
+  age: 1,
+  cash: 0,
+  savings: 0,
+  stock: 0,
+  debt: 0,
+  interestRate: 5, // %/năm, tăng dần
+  health: 100,
+  stress: 0,
+  job: "Chưa có việc",
+  salary: 0,
+  status: "Ngủ",
+  married: false,
+  children: 0,
+  eduLevel: "Chưa học",
+  marketTrend: 0, // % thay đổi thị trường chứng khoán năm nay
+  inflation: 3,
+  timeSplit: { sleep: 40, work: 30, overtime: 10, rest: 20 }, // % trong năm
+  history: []
+};
 
-            <div class="dashboard-grid">
-                <div class="dash-card">
-                    <h4>Tiền Mặt</h4>
-                    <p id="ui-money" class="money-neutral">$0</p>
-                </div>
-                <div class="dash-card">
-                    <h4>Gửi Ngân Hàng <br><span style="font-size:0.6rem; font-weight:normal;" id="ui-bank-rate">(Lãi: 5%/năm)</span></h4>
-                    <p id="ui-bank" class="money-positive">$0</p>
-                </div>
-                <div class="dash-card">
-                    <h4>Đầu tư Cổ Phiếu</h4>
-                    <p id="ui-stocks" class="money-positive">$0</p>
-                </div>
-                <div class="dash-card">
-                    <h4>Khoản Nợ</h4>
-                    <p id="ui-debt" class="money-negative">$0</p>
-                </div>
-            </div>
+let running = false;
+let timer = null;
 
-            <div style="font-size: 0.85rem; background: var(--bg-base); padding: 10px; border-radius: 8px; margin: 10px 0; border: 1px solid var(--bg-card);">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span style="color:var(--text-muted);">Việc làm:</span> <span id="ui-career" style="font-weight:bold;">Thất nghiệp</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color:var(--text-muted);">Lương / Năm:</span> <span id="ui-salary" style="color:var(--accent-green);">$0</span>
-                </div>
-            </div>
+// ====== UI HELPERS ======
+const el = id => document.getElementById(id);
+function log(msg, isDeath=false) {
+  const div = document.createElement('div');
+  div.innerHTML = `<strong>[Tuổi ${state.age}]</strong> ${msg}`;
+  if (isDeath) div.classList.add('dead');
+  el('log').prepend(div);
+}
+function fmt(n) { return Math.round(n).toLocaleString('vi-VN'); }
 
-            <h4>Hoạt Động Hiện Tại Của AI</h4>
-            <div class="actions-grid">
-                <div class="action-btn" id="btn-study">Học Tập</div>
-                <div class="action-btn" id="btn-work">Làm Việc</div>
-                <div class="action-btn" id="btn-rest">Nghỉ Ngơi</div>
-                <div class="action-btn" id="btn-invest">Đầu Tư</div>
-                <div class="action-btn" id="btn-socialize">Xã Giao</div>
-                <div class="action-btn" id="btn-health">Tập Thể Dục</div>
-            </div>
-        </div>
-    </main>
+function updateUI() {
+  el('ageVal').textContent = state.age;
+  el('cashVal').textContent = fmt(state.cash);
+  el('savingsVal').textContent = fmt(state.savings);
+  el('stockVal').textContent = fmt(state.stock);
+  el('debtVal').textContent = fmt(state.debt);
+  el('interestVal').textContent = state.interestRate.toFixed(1);
+  el('stateVal').textContent = `${state.status} — ${state.job}`;
+  el('healthBar').style.width = Math.max(0,state.health) + '%';
+  el('healthPct').textContent = Math.round(state.health) + '%';
+  el('stressBar').style.width = Math.min(100,state.stress) + '%';
+  el('stressPct').textContent = Math.round(state.stress) + '%';
+  el('genInfo').textContent = `Thế hệ #${state.generation}`;
+  drawPie();
+}
 
-    <script>
-        /******************************************************************
-         * UTILS & CONSTANTS
-         ******************************************************************/
-        const CONSTANTS = {
-            API_URL: "https://openrouter.ai/api/v1/chat/completions",
-            MODEL: "google/gemma-4-31b-it:free", 
-            TICK_RATE: 1000, 
-            SECONDS_PER_YEAR: 30, 
-            START_YEAR: 2024,
-            SAVE_KEY: "ai_life_sim_v4_openrouter" // Đã đổi tên file save
-        };
+function drawPie() {
+  const ctx = el('pieChart').getContext('2d');
+  ctx.clearRect(0,0,180,180);
+  const data = state.timeSplit;
+  const labels = [['Ngủ','sleep','#5af'],['Làm việc','work','#3a5'],['Tăng ca','overtime','#f90'],['Nghỉ ngơi','rest','#a5f']];
+  let total = data.sleep+data.work+data.overtime+data.rest;
+  let start = -Math.PI/2;
+  const legend = el('pieLegend');
+  legend.innerHTML = '';
+  labels.forEach(([name,key,color]) => {
+    let slice = (data[key]/total) * Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(90,90);
+    ctx.arc(90,90,80,start,start+slice);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    start += slice;
+    legend.innerHTML += `<div><span class="swatch" style="background:${color}"></span>${name}: ${Math.round(data[key]/total*100)}%</div>`;
+  });
+}
 
-        const Utils = {
-            formatMoney: (num) => `$${Math.floor(num).toLocaleString()}`,
-            randomInt: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
-            clamp: (val, min, max) => Math.max(min, Math.min(max, val))
-        };
+// ====== GAME LOGIC ======
+function baseLifeStagePrompt() {
+  let stageDesc = "";
+  if (state.age <= 3) stageDesc = "Giai đoạn sơ sinh: chỉ ăn chơi, không có quyết định tài chính.";
+  else if (state.age <= 8) stageDesc = "Giai đoạn thiếu nhi: học tập, ăn, chơi. Không có thu nhập.";
+  else if (state.age <= 17) stageDesc = "Giai đoạn thiếu niên: bắt đầu lo tương lai, chọn hướng học tập, chưa có thu nhập lớn.";
+  else if (state.age === 18) stageDesc = "Bắt đầu vừa học đại học vừa đi làm thêm.";
+  else if (state.age <= 20) stageDesc = "Đang học đại học + đi làm thêm, cần đóng học phí.";
+  else if (state.age === 21) stageDesc = "Có thể tốt nghiệp nếu đã chăm học và đủ tiền học phí, hoặc chọn đi làm lương thấp, hoặc học lại.";
+  else if (state.age < 30) stageDesc = "Người trưởng thành trẻ: đi làm, tích lũy, đầu tư, trả nợ.";
+  else if (state.age < 35) stageDesc = "Áp lực kết hôn tăng cao, cần chi trả đám cưới, có thể nhận tiền mừng.";
+  else if (state.age < 60) stageDesc = "Có thể có con, áp lực nuôi con và tài chính gia đình.";
+  else if (state.age < 90) stageDesc = "Tuổi trung niên - cao niên: chuẩn bị nghỉ hưu, quản lý tài sản.";
+  else stageDesc = "Cuối đời: chuẩn bị để lại tài sản/nợ cho thế hệ sau.";
+  return stageDesc;
+}
 
-        /******************************************************************
-         * GAME STATE
-         ******************************************************************/
-        let state = {
-            apiKey: "", // Key sẽ được nhập vào lúc khởi tạo
-            generation: 1,
-            time: { year: CONSTANTS.START_YEAR, yearProgress: 0 },
-            world: { 
-                weather: "Nắng", 
-                economyPhase: "Phục Hồi", 
-                cycleYearsLeft: 3,
-                bankInterestRate: 0.05, 
-                marketIndex: 1000 
-            },
-            person: {
-                name: "Alpha", age: 1, lifeStage: "Sơ sinh", personality: "", avatar: "👶",
-                stats: { health: 100, stress: 0, mood: 100 },
-                macroFocus: "rest"
-            },
-            finances: { money: 0, bank: 0, debt: 0, stocks: 0, yearlySalary: 0, yearlyExpenses: 2000 },
-            career: { title: "Không có", isEmployed: false, isStudent: false },
-            relationships: [],
-            history: { market: [1000] },
-            flags: { hasPartner: false, hasKids: 0, isThinking: false }
-        };
+async function callGroqDecision() {
+  const prompt = `
+Bạn là một AI đang mô phỏng MỘT NĂM trong cuộc đời của một nhân vật, hiện tại nhân vật ${state.age} tuổi.
+Giai đoạn hiện tại: ${baseLifeStagePrompt()}
 
-        const CAREERS = [
-            { title: "Phục Vụ Bàn", salary: 15000, stress: 30 }, { title: "Nhân Viên Bán Hàng", salary: 20000, stress: 35 },
-            { title: "Nhân Viên Văn Phòng", salary: 35000, stress: 25 }, { title: "Lập Trình Viên", salary: 60000, stress: 50 },
-            { title: "Trưởng Phòng", salary: 90000, stress: 70 }, { title: "Giám Đốc (CEO)", salary: 300000, stress: 90 }
-        ];
+Thông tin hiện tại:
+- Tiền mặt: ${state.cash} VNĐ
+- Tiết kiệm ngân hàng: ${state.savings} VNĐ
+- Đầu tư chứng khoán: ${state.stock} VNĐ
+- Nợ: ${state.debt} VNĐ (lãi suất ${state.interestRate}%/năm)
+- Sức khỏe: ${state.health}/100
+- Căng thẳng: ${state.stress}/100
+- Công việc: ${state.job}, lương năm: ${state.salary}
+- Đã kết hôn: ${state.married}, số con: ${state.children}
+- Trình độ học vấn: ${state.eduLevel}
+- Xu hướng thị trường chứng khoán năm nay: ${state.marketTrend}%
+- Lạm phát năm nay: ${state.inflation}%
 
-        const PERSONALITIES = ["Hướng nội, Tiết kiệm", "Hướng ngoại, Thích rủi ro", "Tham vọng, Dễ stress", "Thoải mái, Lạc quan", "Kiên nhẫn, Thích Đầu tư"];
-
-        /******************************************************************
-         * UI CONTROLLER
-         ******************************************************************/
-        class UI {
-            static get(id) { return document.getElementById(id); }
-
-            static initChart() {
-                this.ctx = this.get('chart-market').getContext('2d');
-            }
-
-            static updateAll() {
-                this.get('ui-year').innerText = state.time.year;
-                
-                const phaseColors = {"Phục Hồi": "var(--accent-blue)", "Tăng Trưởng": "var(--accent-green)", "Bong Bóng": "var(--accent-yellow)", "Suy Thoái": "var(--accent-red)"};
-                const phaseEl = this.get('ui-economy-phase');
-                phaseEl.innerText = state.world.economyPhase;
-                phaseEl.style.color = phaseColors[state.world.economyPhase];
-
-                this.get('ui-generation').innerText = state.generation;
-                this.get('ui-year-timer').innerText = `Năm nay: ${state.time.yearProgress} / 30s`;
-                this.get('bar-year').style.width = `${(state.time.yearProgress / CONSTANTS.SECONDS_PER_YEAR) * 100}%`;
-
-                this.get('ai-status-text').innerText = state.flags.isThinking ? "Đang Lập Kế Hoạch..." : "Đang Sống";
-                this.get('ai-indicator').className = `indicator ${state.flags.isThinking ? 'active' : ''}`;
-
-                this.get('ui-name').innerText = state.person.name;
-                this.get('ui-age').innerText = state.person.age;
-                this.get('ui-stage').innerText = state.person.lifeStage;
-                this.get('ui-avatar').innerText = state.person.avatar;
-                this.get('ui-personality').innerText = state.person.personality;
-                
-                const s = state.person.stats;
-                this.get('ui-val-health').innerText = Math.round(s.health) + "%"; this.get('bar-health').style.width = s.health + "%";
-                this.get('ui-val-stress').innerText = Math.round(s.stress) + "%"; this.get('bar-stress').style.width = s.stress + "%";
-                this.get('ui-val-mood').innerText = Math.round(s.mood) + "%"; this.get('bar-mood').style.width = s.mood + "%";
-
-                this.get('ui-money').innerText = Utils.formatMoney(state.finances.money);
-                this.get('ui-bank').innerText = Utils.formatMoney(state.finances.bank);
-                this.get('ui-stocks').innerText = Utils.formatMoney(state.finances.stocks);
-                this.get('ui-debt').innerText = Utils.formatMoney(state.finances.debt);
-                
-                this.get('ui-bank-rate').innerText = `(Lãi: ${(state.world.bankInterestRate * 100).toFixed(1)}%/năm)`;
-                this.get('ui-market-points').innerText = `${Math.round(state.world.marketIndex)} pts`;
-
-                this.get('ui-salary').innerText = Utils.formatMoney(state.finances.yearlySalary);
-                this.get('ui-career').innerText = state.career.isStudent ? "Sinh Viên Đại Học" : (state.career.isEmployed ? state.career.title : "Thất nghiệp");
-
-                document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('active'));
-                const btnMap = { "study": "btn-study", "work": "btn-work", "rest": "btn-rest", "invest": "btn-invest", "socialize": "btn-socialize", "health": "btn-health" };
-                if(btnMap[state.person.macroFocus]) this.get(btnMap[state.person.macroFocus]).classList.add('active');
-
-                const relContainer = this.get('ui-relationships');
-                relContainer.innerHTML = '';
-                if(state.relationships.length === 0) relContainer.innerHTML = '<span style="color:var(--text-muted);">Chưa có.</span>';
-                state.relationships.forEach(rel => {
-                    relContainer.innerHTML += `
-                        <div style="background:var(--bg-card); padding:8px; border-radius:6px; display:flex; justify-content:space-between;">
-                            <span>${rel.name}</span><span style="color:var(--accent-red);">❤ ${Math.round(rel.trust)}%</span>
-                        </div>`;
-                });
-            }
-
-            static drawMarketChart() {
-                if(!this.ctx) return;
-                const data = state.history.market;
-                const canvas = this.ctx.canvas;
-                
-                canvas.width = canvas.parentElement.clientWidth - 20;
-                canvas.height = 100;
-
-                this.ctx.clearRect(0, 0, canvas.width, canvas.height);
-                if(data.length < 2) return;
-                
-                const max = Math.max(...data, 1100);
-                const min = Math.min(...data, 900);
-                const range = max - min;
-                
-                this.ctx.beginPath();
-                this.ctx.lineWidth = 2;
-                
-                const isUp = data[data.length-1] >= data[data.length-2];
-                this.ctx.strokeStyle = isUp ? '#10b981' : '#ef4444'; 
-                
-                const step = canvas.width / (Math.max(data.length - 1, 10)); 
-                
-                data.forEach((val, i) => {
-                    const x = i * step;
-                    const y = canvas.height - ((val - min) / (range || 1)) * canvas.height;
-                    if(i === 0) this.ctx.moveTo(x, y);
-                    else this.ctx.lineTo(x, y);
-                });
-                this.ctx.stroke();
-
-                this.ctx.lineTo((data.length - 1) * step, canvas.height);
-                this.ctx.lineTo(0, canvas.height);
-                this.ctx.fillStyle = isUp ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
-                this.ctx.fill();
-            }
-
-            static logSystemEvent(text, type = "normal") {
-                const container = this.get('ui-timeline');
-                const div = document.createElement('div');
-                div.className = `event-card ${type}`;
-                div.innerHTML = `<div class="event-time">Tuổi ${state.person.age}</div>${text}`;
-                container.appendChild(div);
-                container.scrollTop = container.scrollHeight;
-            }
-
-            static logAIChat(thought) {
-                const container = this.get('ui-ai-chat');
-                const div = document.createElement('div');
-                div.className = 'chat-message';
-                div.innerHTML = `<div class="chat-meta">Tuổi ${state.person.age}</div><div class="chat-bubble">"${thought}"</div>`;
-                container.appendChild(div);
-                container.scrollTop = container.scrollHeight;
-            }
-        }
-
-        /******************************************************************
-         * AI ENGINE
-         ******************************************************************/
-        class AI {
-            static async requestYearlyPlan() {
-                if(!state.apiKey) {
-                    UI.logSystemEvent("Lỗi: Chưa có OpenRouter API Key. Kích hoạt bản năng sinh tồn.", "critical");
-                    return this.getFallbackDecision();
-                }
-                state.flags.isThinking = true;
-                UI.updateAll();
-
-                const systemPrompt = `Bạn đang đóng vai: ${state.person.name}, Tuổi: ${state.person.age} (${state.person.lifeStage}).
-Tính cách: ${state.person.personality}.
-Sức khỏe: ${Math.round(state.person.stats.health)}/100, Căng thẳng: ${Math.round(state.person.stats.stress)}/100.
-Tài sản: Tiền Mặt $${Math.round(state.finances.money)}, Ngân Hàng $${Math.round(state.finances.bank)}, Cổ Phiếu $${Math.round(state.finances.stocks)}, Nợ $${Math.round(state.finances.debt)}.
-Nghề: ${state.career.isEmployed ? state.career.title : "Thất nghiệp"}. Lương: $${state.finances.yearlySalary}.
-Thị trường: Đang ${state.world.economyPhase}.
-
-Lên kế hoạch năm nay. Chọn 1 'macro_focus' từ: "study", "work", "rest", "invest" (Dành tiền mua cổ phiếu), "bank" (Gửi tiết kiệm), "socialize", "health".
-Chọn 1 'major_action': "apply_job", "quit_job", "university", "propose", "have_child", "none".
-
-Trả về JSON:
+Hãy đưa ra quyết định cho năm nay dưới dạng JSON THUẦN (không markdown, không giải thích thêm) theo format:
 {
-    "thought": "Suy nghĩ bằng tiếng Việt, giải thích lý do đầu tư hay gửi ngân hàng, làm việc hay nghỉ ngơi.",
-    "macro_focus": "chosen_focus",
-    "major_action": "chosen_action"
-}`;
+  "narrative": "mô tả ngắn gọn 1-2 câu chuyện xảy ra năm nay bằng tiếng Việt",
+  "job": "tên công việc mới hoặc giữ nguyên",
+  "salary_change_pct": số phần trăm thay đổi lương (-100 đến 100),
+  "action": "một trong: gửi_tiết_kiệm, đầu_tư_chứng_khoán, rút_chứng_khoán, vay_ngân_hàng, trả_nợ, nghỉ_ngơi, tăng_ca, học_thêm, kết_hôn, sinh_con, không_làm_gì",
+  "amount": số tiền liên quan đến action (VNĐ, có thể 0),
+  "time_split": {"sleep": %, "work": %, "overtime": %, "rest": %} (tổng = 100),
+  "health_change": số thay đổi sức khỏe (-30 đến +20),
+  "stress_change": số thay đổi căng thẳng (-20 đến +30)
+}
+Chỉ trả về JSON, không thêm gì khác.
+`;
 
-                try {
-                    const response = await fetch(CONSTANTS.API_URL, {
-                        method: "POST",
-                        headers: { 
-                            "Authorization": `Bearer ${state.apiKey}`, 
-                            "Content-Type": "application/json",
-                            "HTTP-Referer": "https://a-life-sim-project.com", // Optional, but good practice for OpenRouter
-                            "X-Title": "AI Life Sim" // Optional, for OpenRouter analytics
-                        },
-                        body: JSON.stringify({
-                            model: CONSTANTS.MODEL,
-                            messages: [{ role: "system", content: systemPrompt }],
-                            temperature: 0.7
-                        })
-                    });
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.9
+      })
+    });
+    const data = await res.json();
+    let text = data.choices?.[0]?.message?.content || "{}";
+    text = text.replace(/```json|```/g,'').trim();
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Groq error", e);
+    return { narrative: "AI không thể quyết định năm nay (lỗi kết nối).", action: "không_làm_gì", amount:0, time_split:state.timeSplit, health_change:-5, stress_change:5, salary_change_pct:0, job: state.job };
+  }
+}
 
-                    const data = await response.json();
-                    if (data.error) throw new Error(data.error.message);
+function applyEconomy() {
+  // Thị trường chứng khoán biến động ngẫu nhiên
+  state.marketTrend = Math.round((Math.random()*40 - 15)); // -15% đến +25%
+  state.stock = state.stock * (1 + state.marketTrend/100);
 
-                    if (!data.choices || !data.choices[0]) {
-                        console.warn("AI didn't return choices. Using fallback.");
-                        return this.getFallbackDecision();
-                    }
+  // Lãi suất ngân hàng tăng nhẹ theo lạm phát
+  state.inflation = Math.max(1, Math.round(state.inflation + (Math.random()*4 - 2)));
+  state.interestRate = Math.min(25, state.interestRate + (Math.random()*1 - 0.3));
 
-                    let content = data.choices[0].message.content;
-                    const jsonStart = content.indexOf('{');
-                    const jsonEnd = content.lastIndexOf('}');
-                    if(jsonStart !== -1 && jsonEnd !== -1) content = content.substring(jsonStart, jsonEnd + 1);
-                    else throw new Error("Could not extract JSON from AI response.");
+  // Tiết kiệm tăng chậm
+  state.savings = state.savings * (1 + 0.05);
 
-                    const parsed = JSON.parse(content);
-                    state.flags.isThinking = false;
-                    return parsed;
+  // Nợ tăng theo lãi suất
+  if (state.debt > 0) {
+    state.debt = state.debt * (1 + state.interestRate/100);
+  }
+}
 
-                } catch (error) {
-                    console.error("AI Error:", error);
-                    UI.logSystemEvent("Lỗi kết nối AI hoặc lỗi parsing. Kích hoạt bản năng sinh tồn.", "critical");
-                    state.flags.isThinking = false;
-                    UI.updateAll();
-                    return this.getFallbackDecision();
-                }
-            }
+async function tick() {
+  if (state.age > 100) {
+    endLife();
+    return;
+  }
 
-            static getFallbackDecision() {
-                let autoFocus = "work"; // Mặc định là làm việc
-                if (state.person.stats.stress > 80) autoFocus = "rest";
-                if (state.finances.money < 1000 && !state.career.isEmployed && state.person.age >= 18) autoFocus = "work";
+  applyEconomy();
+  const decision = await callGroqDecision();
 
-                let autoAction = "none";
-                if (state.finances.money < 0 && !state.career.isEmployed && state.person.age >= 18) autoAction = "apply_job";
+  // Áp dụng quyết định
+  if (decision.job) state.job = decision.job;
+  if (decision.salary_change_pct) {
+    state.salary = state.salary * (1 + decision.salary_change_pct/100);
+    if (state.salary < 0) state.salary = 0;
+  }
+  state.cash += state.salary; // nhận lương năm
 
-                return {
-                    thought: "(Hệ thống AI gián đoạn) Năm nay cứ sống theo bản năng, kiếm tiền và thư giãn...",
-                    macro_focus: autoFocus,
-                    major_action: autoAction
-                };
-            }
+  const amt = Number(decision.amount) || 0;
+  switch (decision.action) {
+    case "gửi_tiết_kiệm":
+      state.cash -= amt; state.savings += amt; break;
+    case "đầu_tư_chứng_khoán":
+      state.cash -= amt; state.stock += amt; break;
+    case "rút_chứng_khoán":
+      state.stock -= amt; state.cash += amt; break;
+    case "vay_ngân_hàng":
+      state.debt += amt; state.cash += amt; break;
+    case "trả_nợ":
+      state.debt = Math.max(0, state.debt - amt); state.cash -= amt; break;
+    case "kết_hôn":
+      state.married = true;
+      state.cash -= amt; // chi phí đám cưới
+      const giftMoney = Math.round(Math.random()*50000000);
+      state.cash += giftMoney;
+      log(`💍 Kết hôn! Chi phí đám cưới: ${fmt(amt)} VNĐ, tiền mừng nhận được: ${fmt(giftMoney)} VNĐ`);
+      break;
+    case "sinh_con":
+      state.children += 1;
+      state.cash -= amt;
+      break;
+  }
 
-            static processDecision(decision) {
-                if(!decision) return;
-                
-                if(decision.thought) UI.logAIChat(decision.thought);
-                
-                let focus = decision.macro_focus;
-                if(focus === "bank" || focus === "invest") { // Gộp chung logic xử lý tiền
-                    if(state.finances.money > 1000) {
-                        let amount = state.finances.money * 0.5;
-                        state.finances.money -= amount;
-                        if(focus === "invest") {
-                            state.finances.stocks += amount;
-                            UI.logSystemEvent(`Đã dùng $${Utils.formatMoney(amount)} mua cổ phiếu.`, "normal");
-                        } else { // focus === "bank"
-                            state.finances.bank += amount;
-                            UI.logSystemEvent(`Đã gửi $${Utils.formatMoney(amount)} vào ngân hàng ăn lãi.`, "normal");
-                        }
-                    }
-                }
-                state.person.macroFocus = focus; // Cập nhật trạng thái focus
+  if (decision.time_split) state.timeSplit = decision.time_split;
+  state.health = Math.min(100, Math.max(0, state.health + (Number(decision.health_change)||0)));
+  state.stress = Math.min(100, Math.max(0, state.stress + (Number(decision.stress_change)||0)));
 
-                const action = decision.major_action;
-                if(action === "apply_job" && state.person.age >= 16 && !state.career.isEmployed) {
-                    const job = CAREERS[Utils.randomInt(0, Math.min(CAREERS.length-1, Math.floor(state.person.age/10)))];
-                    state.career.isEmployed = true; state.career.title = job.title; state.finances.yearlySalary = job.salary;
-                    UI.logSystemEvent(`Đã xin việc: ${job.title}! Lương $${job.salary}/năm.`);
-                } else if(action === "quit_job" && state.career.isEmployed) {
-                    state.career.isEmployed = false; state.career.title = "Không có"; state.finances.yearlySalary = 0;
-                    UI.logSystemEvent("Đã nộp đơn nghỉ việc.");
-                } else if(action === "propose" && state.person.age >= 18 && !state.flags.hasPartner) {
-                    state.flags.hasPartner = true;
-                    UI.logSystemEvent("Đã cầu hôn và kết hôn! 💍 🎉", "critical");
-                    state.relationships.push({ name: `Vợ/Chồng`, trust: 100 });
-                }
-            }
-        }
+  log(decision.narrative || "Không có sự kiện đặc biệt năm nay.");
 
-        /******************************************************************
-         * SIMULATION & ECONOMY ENGINE
-         ******************************************************************/
-        class SimulationEngine {
-            static start() {
-                UI.initChart();
-                if(this.interval) clearInterval(this.interval);
-                this.interval = setInterval(() => this.tick(), CONSTANTS.TICK_RATE); 
-                UI.logSystemEvent("Mô phỏng bắt đầu.");
-                this.triggerNewYear(); 
-            }
+  // Đột quỵ nếu sức khỏe quá thấp
+  if (state.health < 20) {
+    if (Math.random() < 0.4) {
+      log("🚨 ĐỘT QUỴ do sức khỏe quá yếu và không nghỉ ngơi đầy đủ!", true);
+      endLife();
+      return;
+    } else {
+      log("⚠️ Sức khỏe nguy hiểm! Cần nghỉ ngơi ngay hoặc sẽ đột quỵ.", true);
+    }
+  }
 
-            static stop() { clearInterval(this.interval); }
+  state.age += 1;
+  updateUI();
+}
 
-            static async tick() {
-                if(state.flags.isThinking) return; 
+function endLife() {
+  stop();
+  log(`☠️ Kết thúc cuộc đời ở tuổi ${state.age}. Tài sản để lại: ${fmt(state.cash+state.savings+state.stock)} VNĐ, Nợ để lại: ${fmt(state.debt)} VNĐ`, true);
 
-                state.time.yearProgress++;
-                this.applyEconomyPerSecond(); 
-                
-                UI.updateAll();
-                UI.drawMarketChart();
+  // Thế hệ tiếp theo thừa kế
+  const inheritance = state.cash + state.savings + state.stock;
+  const inheritedDebt = state.debt;
 
-                if(state.time.yearProgress >= CONSTANTS.SECONDS_PER_YEAR) {
-                    state.time.yearProgress = 0;
-                    state.time.year++;
-                    state.person.age++;
-                    await this.triggerNewYear();
-                }
-            }
+  state = {
+    generation: state.generation + 1,
+    age: 1,
+    cash: inheritance,
+    savings: 0,
+    stock: 0,
+    debt: inheritedDebt,
+    interestRate: 5 + Math.random()*3,
+    health: 100,
+    stress: 0,
+    job: "Chưa có việc",
+    salary: 0,
+    status: "Ngủ",
+    married: false,
+    children: 0,
+    eduLevel: "Chưa học",
+    marketTrend: 0,
+    inflation: 3,
+    timeSplit: { sleep: 40, work: 30, overtime: 10, rest: 20 },
+    history: []
+  };
+  log(`👶 Thế hệ mới #${state.generation} bắt đầu, thừa kế ${fmt(inheritance)} VNĐ và ${fmt(inheritedDebt)} VNĐ nợ.`);
+  updateUI();
+  start(); // tự động tiếp tục thế hệ mới
+}
 
-            static applyEconomyPerSecond() {
-                const w = state.world;
-                const f = state.finances;
+function start() {
+  if (running) return;
+  running = true;
+  el('startBtn').disabled = true;
+  el('pauseBtn').disabled = false;
+  timer = setInterval(tick, TICK_MS);
+  tick(); // chạy ngay lượt đầu
+}
+function stop() {
+  running = false;
+  el('startBtn').disabled = false;
+  el('pauseBtn').disabled = true;
+  clearInterval(timer);
+}
+function reset() {
+  stop();
+  location.reload();
+}
 
-                const interestPerSecond = w.bankInterestRate / CONSTANTS.SECONDS_PER_YEAR;
-                if(f.bank > 0) f.bank += f.bank * interestPerSecond;
+el('startBtn').onclick = start;
+el('pauseBtn').onclick = stop;
+el('resetBtn').onclick = reset;
 
-                let baseTrend = 0; 
-                let volatility = (Math.random() - 0.5) * 0.02; 
-
-                if(w.economyPhase === "Phục Hồi") baseTrend = 0.05; 
-                if(w.economyPhase === "Tăng Trưởng") baseTrend = 0.15; 
-                if(w.economyPhase === "Bong Bóng") { baseTrend = 0.25; volatility *= 2; } 
-                if(w.economyPhase === "Suy Thoái") { baseTrend = -0.15; volatility *= 1.5; } 
-
-                let dailyGrowth = (baseTrend / CONSTANTS.SECONDS_PER_YEAR) + volatility;
-                
-                w.marketIndex += w.marketIndex * dailyGrowth;
-                if(f.stocks > 0) f.stocks += f.stocks * dailyGrowth;
-
-                if(state.career.isEmployed) f.money += (f.yearlySalary / CONSTANTS.SECONDS_PER_YEAR);
-                let livingCost = state.person.age >= 18 ? 15000 : 0; 
-                f.money -= ((livingCost + f.yearlyExpenses) / CONSTANTS.SECONDS_PER_YEAR);
-
-                const debtInterest = (w.bankInterestRate + 0.05) / CONSTANTS.SECONDS_PER_YEAR;
-                if(f.debt > 0) {
-                    f.debt += f.debt * debtInterest;
-                    if(f.money > 0) { 
-                        const repay = Math.min(f.money, (f.debt * 0.2)/CONSTANTS.SECONDS_PER_YEAR); 
-                        f.money -= repay; f.debt -= repay;
-                    }
-                } else if(f.money < 0) {
-                    f.debt += Math.abs(f.money); f.money = 0; 
-                }
-
-                const s = state.person.stats;
-                if(state.person.macroFocus === "work") s.stress += (15/30);
-                if(state.person.macroFocus === "rest") { s.stress -= 1; s.health += (5/30); }
-                if(s.stress > 85) s.health -= (10/30);
-                if(s.stress < 20) s.health += (5/30);
-                if(state.person.age > 45) s.health -= ((state.person.age - 40) * 1.5) / 30; 
-                
-                s.health = Utils.clamp(s.health, 0, 100);
-                s.stress = Utils.clamp(s.stress, 0, 100);
-                if(s.health <= 0) this.handleDeath();
-            }
-
-            static updateEconomyCycle() {
-                state.world.cycleYearsLeft--;
-                if(state.world.cycleYearsLeft <= 0) {
-                    const phases = ["Phục Hồi", "Tăng Trưởng", "Bong Bóng", "Suy Thoái"];
-                    let currentIndex = phases.indexOf(state.world.economyPhase);
-                    let nextIndex = (currentIndex + 1) % phases.length;
-                    
-                    state.world.economyPhase = phases[nextIndex];
-                    state.world.cycleYearsLeft = Utils.randomInt(3, 7); 
-
-                    if(state.world.economyPhase === "Tăng Trưởng") state.world.bankInterestRate = 0.06;
-                    if(state.world.economyPhase === "Bong Bóng") state.world.bankInterestRate = 0.09; 
-                    if(state.world.economyPhase === "Suy Thoái") state.world.bankInterestRate = 0.02; 
-                    if(state.world.economyPhase === "Phục Hồi") state.world.bankInterestRate = 0.04;
-
-                    UI.logSystemEvent(`Nền kinh tế bước vào giai đoạn: ${state.world.economyPhase.toUpperCase()}!`, "critical");
-                }
-                
-                state.history.market.push(state.world.marketIndex);
-                if(state.history.market.length > 50) state.history.market.shift(); 
-            }
-
-            static async triggerNewYear() {
-                if(state.person.age === 4) state.person.lifeStage = "Trẻ em";
-                if(state.person.age === 18) state.person.lifeStage = "Thanh niên";
-                if(state.person.age === 65) { state.person.lifeStage = "Người già"; UI.logSystemEvent("Đã đến tuổi nghỉ hưu."); }
-                
-                if(state.person.age === 100) { this.handleDeath(); return; }
-
-                UI.logSystemEvent(`🎉 Chúc mừng sinh nhật Tuổi ${state.person.age}!`);
-                
-                this.updateEconomyCycle(); 
-
-                localStorage.setItem(CONSTANTS.SAVE_KEY, JSON.stringify(state)); // Lưu state trước khi gọi AI
-
-                const plan = await AI.requestYearlyPlan();
-                AI.processDecision(plan);
-            }
-
-            static handleDeath() {
-                this.stop();
-                UI.logSystemEvent(`${state.person.name} đã qua đời ở tuổi ${state.person.age}.`, "critical");
-                UI.logAIChat(`(Tiếng bíp tim ngừng đập)... Cuộc đời kết thúc.`);
-                
-                setTimeout(() => {
-                    state.generation++;
-                    const inheritance = Math.max(0, state.finances.money + state.finances.bank + state.finances.stocks - state.finances.debt);
-                    
-                    state.time.yearProgress = 0;
-                    state.person = {
-                        name: `Hậu duệ Đời ${state.generation}`, age: 1, lifeStage: "Sơ sinh",
-                        personality: PERSONALITIES[Math.floor(Math.random() * PERSONALITIES.length)],
-                        avatar: "👶", stats: { health: 100, stress: 0, mood: 100 }, macroFocus: "rest"
-                    };
-                    state.finances = { money: inheritance, bank: 0, debt: 0, stocks: 0, yearlySalary: 0, yearlyExpenses: 2000 };
-                    state.career = { title: "Không có", isEmployed: false, isStudent: false };
-                    state.relationships = [];
-                    state.flags = { hasPartner: false, hasKids: 0, isThinking: false }; // Reset isThinking flag
-
-                    UI.logSystemEvent(`Đời thứ ${state.generation} bắt đầu. Kế thừa $${Utils.formatMoney(inheritance)}.`, "critical");
-                    this.start();
-                }, 5000);
-            }
-        }
-
-        /******************************************************************
-         * INITIALIZATION
-         ******************************************************************/
-        function initApp() {
-            const savedData = localStorage.getItem(CONSTANTS.SAVE_KEY);
-            if(savedData) {
-                try {
-                    const parsed = JSON.parse(savedData);
-                    state = { ...state, ...parsed };
-                    // Sau khi load, nếu có API Key cũ thì đưa vào ô nhập liệu
-                    document.getElementById('api-key-input').value = state.apiKey;
-                    UI.logSystemEvent("Đã tìm thấy dữ liệu game cũ. Tiếp tục.", "normal");
-                } catch(e) {
-                    UI.logSystemEvent("Lỗi đọc dữ liệu save. Bắt đầu game mới.", "critical");
-                    localStorage.removeItem(CONSTANTS.SAVE_KEY); // Xóa save cũ nếu lỗi
-                }
-            }
-
-            document.getElementById('start-btn').addEventListener('click', () => {
-                const key = document.getElementById('api-key-input').value.trim();
-                if(!key) { alert("Vui lòng nhập OpenRouter API Key để bắt đầu."); return; }
-                state.apiKey = key; // Lưu API Key mới vào state
-
-                if(!state.person.personality) state.person.personality = PERSONALITIES[Utils.randomInt(0, PERSONALITIES.length - 1)];
-                document.getElementById('setup-modal').style.display = 'none';
-                SimulationEngine.start();
-            });
-        }
-
-        window.onload = initApp;
-    </script>
+updateUI();
+log("Chào mừng đến với Mô Phỏng Cuộc Đời AI. Nhấn Bắt đầu để khởi động.");
+</script>
 </body>
 </html>
