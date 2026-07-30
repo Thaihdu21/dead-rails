@@ -31,8 +31,6 @@
   .invest-table { width:100%; font-size:13px; border-collapse: collapse; margin-top:8px; }
   .invest-table td { padding:4px 0; }
   .invest-table td:last-child { text-align:right; font-weight:bold; }
-  .up { color:#5f5; }
-  .down { color:#f66; }
   .inflation-tag { display:inline-block; background:#432; color:#fc8; padding:2px 8px; border-radius:6px; font-size:12px; margin-left:8px; }
 </style>
 </head>
@@ -113,6 +111,21 @@ const GROQ_API_KEY = "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";
 const GROQ_MODEL = "openai/gpt-oss-20b";
 const TICK_MS = 15000; // 15s = 1 năm
 
+// ====== BẢNG LƯƠNG THAM KHẢO (VNĐ/năm) ======
+const SALARY_TABLE = {
+  "lao_dong_pho_thong": { min: 72000000, max: 96000000, label: "Lao động phổ thông (3 cọc 3 đồng)" },
+  "van_phong":          { min: 120000000, max: 216000000, label: "Nhân viên văn phòng" },
+  "chuyen_mon":         { min: 240000000, max: 480000000, label: "Chuyên môn/kỹ sư có kinh nghiệm" },
+  "quan_ly":            { min: 480000000, max: 960000000, label: "Quản lý/chuyên gia cao cấp" }
+};
+
+const WEDDING_COST_MIN = 20000000, WEDDING_COST_MAX = 40000000; // chi phí tổ chức đám cưới
+const WEDDING_GIFT_MIN = 10000000, WEDDING_GIFT_MAX = 30000000; // tiền mừng cưới nhận được
+
+function randRange(min, max) {
+  return Math.round(min + Math.random() * (max - min));
+}
+
 // ====== STATE ======
 let state = {
   generation: 1,
@@ -126,6 +139,7 @@ let state = {
   stress: 0,
   job: "Chưa có việc",
   salary: 0,
+  currentTier: null,
   status: "Ngủ",
   married: false,
   children: 0,
@@ -133,7 +147,7 @@ let state = {
   marketTrend: 0,
   inflation: 3,
   timeSplit: { sleep: 40, work: 30, overtime: 10, rest: 20 },
-  marketHistory: [], // {age, trend}
+  marketHistory: [],
   totals: { saved: 0, invested: 0, withdrawn: 0, borrowed: 0, repaid: 0 }
 };
 
@@ -216,7 +230,7 @@ function drawLineChart() {
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0,0,w,h);
 
-  const hist = state.marketHistory.slice(-30); // 30 năm gần nhất
+  const hist = state.marketHistory.slice(-30);
   if (hist.length === 0) return;
 
   const padding = 20;
@@ -225,14 +239,12 @@ function drawLineChart() {
   const scaleY = (h/2 - padding) / maxAbs;
   const stepX = (w - padding*2) / Math.max(1, hist.length - 1);
 
-  // đường zero
   ctx.strokeStyle = '#444';
   ctx.beginPath();
   ctx.moveTo(padding, zeroY);
   ctx.lineTo(w-padding, zeroY);
   ctx.stroke();
 
-  // đường thị trường
   ctx.strokeStyle = '#6cf';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -243,7 +255,6 @@ function drawLineChart() {
   });
   ctx.stroke();
 
-  // điểm + màu theo tăng/giảm
   hist.forEach((p, i) => {
     const x = padding + i*stepX;
     const y = zeroY - p.trend*scaleY;
@@ -253,7 +264,6 @@ function drawLineChart() {
     ctx.fill();
   });
 
-  // nhãn năm cuối
   ctx.fillStyle = '#aaa';
   ctx.font = '11px sans-serif';
   const last = hist[hist.length-1];
@@ -278,6 +288,10 @@ function baseLifeStagePrompt() {
 }
 
 async function callGroqDecision() {
+  const salaryTableText = Object.entries(SALARY_TABLE)
+    .map(([key, v]) => `- ${key}: ${v.label}, ${fmt(v.min)} - ${fmt(v.max)} VNĐ/năm`)
+    .join('\n');
+
   const prompt = `
 Bạn là một AI đang mô phỏng MỘT NĂM trong cuộc đời của một nhân vật, hiện tại nhân vật ${state.age} tuổi.
 Giai đoạn hiện tại: ${baseLifeStagePrompt()}
@@ -295,14 +309,20 @@ Thông tin hiện tại:
 - Xu hướng thị trường chứng khoán năm nay: ${state.marketTrend}%
 - Lạm phát năm nay: ${state.inflation}%
 
+BẢNG MỨC LƯƠNG THAM KHẢO (bắt buộc chọn 1 trong các mốc này, KHÔNG được tự đặt lương ngoài khung):
+${salaryTableText}
+
+Lưu ý: nếu nhân vật dưới 18 tuổi hoặc đang đi học chưa tốt nghiệp, chỉ nên chọn "lao_dong_pho_thong" (làm thêm) hoặc "khong_co_luong".
+Nếu kết hôn (action = kết_hôn), chi phí tổ chức đám cưới sẽ tự động random 20-40 triệu, tiền mừng cưới tự động random 10-30 triệu — bạn KHÔNG cần tự đặt "amount" cho action này.
+
 Hãy đưa ra quyết định cho năm nay dưới dạng JSON THUẦN (không markdown, không giải thích thêm) theo format:
 {
   "narrative": "mô tả ngắn gọn 1-2 câu chuyện xảy ra năm nay bằng tiếng Việt",
   "reason": "lý do ngắn gọn AI chọn hành động này (1 câu, tiếng Việt)",
   "job": "tên công việc mới hoặc giữ nguyên",
-  "salary_change_pct": số phần trăm thay đổi lương (-100 đến 100),
+  "salary_tier": "một trong: lao_dong_pho_thong, van_phong, chuyen_mon, quan_ly, hoac 'khong_co_luong'",
   "action": "một trong: gửi_tiết_kiệm, đầu_tư_chứng_khoán, rút_chứng_khoán, vay_ngân_hàng, trả_nợ, nghỉ_ngơi, tăng_ca, học_thêm, kết_hôn, sinh_con, không_làm_gì",
-  "amount": số tiền liên quan đến action (VNĐ, có thể 0),
+  "amount": số tiền liên quan đến action (VNĐ, có thể 0, KHÔNG áp dụng cho action kết_hôn),
   "time_split": {"sleep": %, "work": %, "overtime": %, "rest": %} (tổng = 100),
   "health_change": số thay đổi sức khỏe (-30 đến +20),
   "stress_change": số thay đổi căng thẳng (-20 đến +30)
@@ -329,7 +349,7 @@ Chỉ trả về JSON, không thêm gì khác.
     return JSON.parse(text);
   } catch (e) {
     console.error("Groq error", e);
-    return { narrative: "AI không thể quyết định năm nay (lỗi kết nối).", reason:"Lỗi API", action: "không_làm_gì", amount:0, time_split:state.timeSplit, health_change:-5, stress_change:5, salary_change_pct:0, job: state.job };
+    return { narrative: "AI không thể quyết định năm nay (lỗi kết nối).", reason:"Lỗi API", action: "không_làm_gì", amount:0, time_split:state.timeSplit, health_change:-5, stress_change:5, salary_tier: "khong_co_luong", job: state.job };
   }
 }
 
@@ -358,10 +378,19 @@ async function tick() {
   const decision = await callGroqDecision();
 
   if (decision.job) state.job = decision.job;
-  if (decision.salary_change_pct) {
-    state.salary = state.salary * (1 + decision.salary_change_pct/100);
-    if (state.salary < 0) state.salary = 0;
+
+  // ====== XỬ LÝ LƯƠNG THEO BẢNG, KHÔNG CHO AI TỰ BỊA SỐ ======
+  if (decision.salary_tier && decision.salary_tier !== "khong_co_luong" && SALARY_TABLE[decision.salary_tier]) {
+    const tier = decision.salary_tier;
+    if (state.currentTier !== tier || !state.salary) {
+      state.salary = randRange(SALARY_TABLE[tier].min, SALARY_TABLE[tier].max);
+      state.currentTier = tier;
+    }
+  } else {
+    state.salary = 0;
+    state.currentTier = null;
   }
+
   state.cash += state.salary;
 
   const amt = Number(decision.amount) || 0;
@@ -382,13 +411,15 @@ async function tick() {
     case "trả_nợ":
       state.debt = Math.max(0, state.debt - amt); state.cash -= amt; state.totals.repaid += amt;
       extra = `Trả nợ: ${fmt(amt)} VNĐ`; break;
-    case "kết_hôn":
+    case "kết_hôn": {
       state.married = true;
-      state.cash -= amt;
-      const giftMoney = Math.round(Math.random()*50000000);
-      state.cash += giftMoney;
-      extra = `Chi phí đám cưới: ${fmt(amt)} VNĐ, tiền mừng nhận được: ${fmt(giftMoney)} VNĐ`;
+      const weddingCost = randRange(WEDDING_COST_MIN, WEDDING_COST_MAX);
+      const weddingGift = randRange(WEDDING_GIFT_MIN, WEDDING_GIFT_MAX);
+      state.cash -= weddingCost;
+      state.cash += weddingGift;
+      extra = `Chi phí tổ chức đám cưới: ${fmt(weddingCost)} VNĐ, tiền mừng nhận được: ${fmt(weddingGift)} VNĐ`;
       break;
+    }
     case "sinh_con":
       state.children += 1;
       state.cash -= amt;
@@ -400,10 +431,10 @@ async function tick() {
   state.health = Math.min(100, Math.max(0, state.health + (Number(decision.health_change)||0)));
   state.stress = Math.min(100, Math.max(0, state.stress + (Number(decision.stress_change)||0)));
 
-  const marketNote = `Thị trường năm nay: ${state.marketTrend>0?'+':''}${state.marketTrend}% | Lạm phát: ${state.inflation}%`;
+  const marketNote = `Thị trường năm nay: ${state.marketTrend>0?'+':''}${state.marketTrend}% | Lạm phát: ${state.inflation}% | Lương/năm: ${fmt(state.salary)} VNĐ`;
   logEntry(
     decision.narrative || "Không có sự kiện đặc biệt năm nay.",
-    { action: decision.action, amount: amt, reason: decision.reason || '', health_change: decision.health_change, stress_change: decision.stress_change },
+    { action: decision.action, amount: amt, salary_tier: decision.salary_tier, reason: decision.reason || '', health_change: decision.health_change, stress_change: decision.stress_change },
     `${extra ? extra + ' | ' : ''}${marketNote}`
   );
 
@@ -441,6 +472,7 @@ function endLife() {
     stress: 0,
     job: "Chưa có việc",
     salary: 0,
+    currentTier: null,
     status: "Ngủ",
     married: false,
     children: 0,
