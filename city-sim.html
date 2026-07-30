@@ -32,6 +32,7 @@
   .invest-table td { padding:4px 0; }
   .invest-table td:last-child { text-align:right; font-weight:bold; }
   .inflation-tag { display:inline-block; background:#432; color:#fc8; padding:2px 8px; border-radius:6px; font-size:12px; margin-left:8px; }
+  .gamble-tag { display:inline-block; background:#421; color:#f88; padding:2px 8px; border-radius:6px; font-size:12px; margin-left:8px; }
 </style>
 </head>
 <body>
@@ -57,7 +58,8 @@
       <div class="stat-label" style="margin-top:8px;">🏦 Tiết kiệm: <span id="savingsVal">0</span> VNĐ</div>
       <div class="stat-label">📈 Chứng khoán: <span id="stockVal">0</span> VNĐ</div>
       <div class="stat-label">🏧 Nợ ngân hàng: <span id="debtVal">0</span> VNĐ (lãi <span id="interestVal">0</span>%)</div>
-      <div class="stat-label">📊 Lạm phát hiện tại: <span class="inflation-tag" id="inflationVal">3%</span></div>
+      <div class="stat-label">📊 Lạm phát: <span class="inflation-tag" id="inflationVal">3%</span></div>
+      <div class="stat-label">🎰 Tình trạng cờ bạc: <span class="gamble-tag" id="gambleVal">Chưa chơi</span></div>
     </div>
 
     <div class="card health">
@@ -89,13 +91,19 @@
   </div>
 
   <div class="card" style="margin-top:16px;">
-    <div class="stat-label">💼 Tổng đầu tư lũy kế</div>
+    <div class="stat-label">💼 Tổng đầu tư / tài chính lũy kế</div>
     <table class="invest-table">
-      <tr><td>Tổng đã gửi tiết kiệm ngân hàng (lũy kế)</td><td id="totalSavedVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã đầu tư vào chứng khoán (lũy kế)</td><td id="totalInvestedVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã rút khỏi chứng khoán (lũy kế)</td><td id="totalWithdrawnVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã vay ngân hàng (lũy kế)</td><td id="totalBorrowedVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã trả nợ (lũy kế)</td><td id="totalRepaidVal">0 VNĐ</td></tr>
+      <tr><td>Tổng đã gửi tiết kiệm ngân hàng</td><td id="totalSavedVal">0 VNĐ</td></tr>
+      <tr><td>Tổng đã rút tiết kiệm</td><td id="totalSavingsWithdrawnVal">0 VNĐ</td></tr>
+      <tr><td>Tổng đã đầu tư vào chứng khoán</td><td id="totalInvestedVal">0 VNĐ</td></tr>
+      <tr><td>Tổng đã rút khỏi chứng khoán</td><td id="totalWithdrawnVal">0 VNĐ</td></tr>
+      <tr><td>Tổng đã vay ngân hàng</td><td id="totalBorrowedVal">0 VNĐ</td></tr>
+      <tr><td>Tổng đã trả nợ</td><td id="totalRepaidVal">0 VNĐ</td></tr>
+      <tr><td>Tổng thuế thu nhập đã đóng</td><td id="totalTaxVal">0 VNĐ</td></tr>
+      <tr><td>Tổng tiền mua xổ số</td><td id="totalLotteryVal">0 VNĐ</td></tr>
+      <tr><td>Tổng trúng xổ số</td><td id="totalLotteryWinVal">0 VNĐ</td></tr>
+      <tr><td>Tổng tiền đã cược casino</td><td id="totalGambleVal">0 VNĐ</td></tr>
+      <tr><td>Tổng thắng/thua casino</td><td id="totalGambleWinVal">0 VNĐ</td></tr>
     </table>
   </div>
 
@@ -107,11 +115,11 @@
 
 <script>
 // ====== CẤU HÌNH ======
-const GROQ_API_KEY = "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"; // <-- thay bằng key thật
-const GROQ_MODEL = "llama-3.1-8b-instant";
-const TICK_MS = 15000; // 15s = 1 năm
+const GROQ_API_KEY = "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";
+const GROQ_MODEL = "meta-llama/llama-prompt-guard-2-22m";
+const TICK_MS = 15000;
 
-// ====== BẢNG LƯƠNG THAM KHẢO (VNĐ/năm) ======
+// ====== BẢNG LƯƠNG ======
 const SALARY_TABLE = {
   "lao_dong_pho_thong": { min: 72000000, max: 96000000, label: "Lao động phổ thông (3 cọc 3 đồng)" },
   "van_phong":          { min: 120000000, max: 216000000, label: "Nhân viên văn phòng" },
@@ -119,11 +127,38 @@ const SALARY_TABLE = {
   "quan_ly":            { min: 480000000, max: 960000000, label: "Quản lý/chuyên gia cao cấp" }
 };
 
-const WEDDING_COST_MIN = 20000000, WEDDING_COST_MAX = 40000000; // chi phí tổ chức đám cưới
-const WEDDING_GIFT_MIN = 10000000, WEDDING_GIFT_MAX = 30000000; // tiền mừng cưới nhận được
+const WEDDING_COST_MIN = 20000000, WEDDING_COST_MAX = 40000000;
+const WEDDING_GIFT_MIN = 10000000, WEDDING_GIFT_MAX = 30000000;
 
-function randRange(min, max) {
-  return Math.round(min + Math.random() * (max - min));
+// ====== THUẾ ======
+const TAX_THRESHOLD = 1000000000;
+const TAX_RATE_HIGH = 0.30;
+const TAX_RATE_NORMAL = 0.10;
+
+function calculateTax(salary, debt) {
+  if (salary >= TAX_THRESHOLD) return salary * TAX_RATE_HIGH;
+  if (debt > 0) return 0;
+  return salary * TAX_RATE_NORMAL;
+}
+
+// ====== XỔ SỐ & CASINO ======
+const LOTTERY_WIN_CHANCE = 0.03; // 3% trúng
+const LOTTERY_MULTIPLIER = 50; // trúng thì x50 tiền vé
+
+function randRange(min, max) { return Math.round(min + Math.random() * (max - min)); }
+
+function playLottery(amount) {
+  const won = Math.random() < LOTTERY_WIN_CHANCE;
+  const prize = won ? amount * LOTTERY_MULTIPLIER : 0;
+  return { won, prize };
+}
+
+function playCasino(amount) {
+  // Nhà cái luôn có lợi thế nhẹ (house edge ~5%)
+  const winChance = 0.45;
+  const won = Math.random() < winChance;
+  const result = won ? Math.round(amount * (1 + Math.random()*1.5)) : -amount;
+  return { won, result };
 }
 
 // ====== STATE ======
@@ -146,15 +181,14 @@ let state = {
   eduLevel: "Chưa học",
   marketTrend: 0,
   inflation: 3,
-  timeSplit: { sleep: 40, work: 30, overtime: 10, rest: 20 },
+  timeSplit: { sleep: 40, work: 30, overtime: 10, rest: 20, gamble: 0 },
   marketHistory: [],
-  totals: { saved: 0, invested: 0, withdrawn: 0, borrowed: 0, repaid: 0 }
+  totals: { saved:0, savingsWithdrawn:0, invested:0, withdrawn:0, borrowed:0, repaid:0, taxPaid:0, lottery:0, lotteryWin:0, gamble:0, gambleWin:0 }
 };
 
 let running = false;
 let timer = null;
 
-// ====== UI HELPERS ======
 const el = id => document.getElementById(id);
 function fmt(n) { return Math.round(n).toLocaleString('vi-VN'); }
 
@@ -191,12 +225,19 @@ function updateUI() {
   el('stressBar').style.width = Math.min(100,state.stress) + '%';
   el('stressPct').textContent = Math.round(state.stress) + '%';
   el('genInfo').textContent = `Thế hệ #${state.generation}`;
+  el('gambleVal').textContent = (state.timeSplit.gamble || 0) > 0 ? `Đang cờ bạc (${state.timeSplit.gamble}% thời gian)` : 'Không cờ bạc';
 
   el('totalSavedVal').textContent = fmt(state.totals.saved) + ' VNĐ';
+  el('totalSavingsWithdrawnVal').textContent = fmt(state.totals.savingsWithdrawn) + ' VNĐ';
   el('totalInvestedVal').textContent = fmt(state.totals.invested) + ' VNĐ';
   el('totalWithdrawnVal').textContent = fmt(state.totals.withdrawn) + ' VNĐ';
   el('totalBorrowedVal').textContent = fmt(state.totals.borrowed) + ' VNĐ';
   el('totalRepaidVal').textContent = fmt(state.totals.repaid) + ' VNĐ';
+  el('totalTaxVal').textContent = fmt(state.totals.taxPaid) + ' VNĐ';
+  el('totalLotteryVal').textContent = fmt(state.totals.lottery) + ' VNĐ';
+  el('totalLotteryWinVal').textContent = fmt(state.totals.lotteryWin) + ' VNĐ';
+  el('totalGambleVal').textContent = fmt(state.totals.gamble) + ' VNĐ';
+  el('totalGambleWinVal').textContent = fmt(state.totals.gambleWin) + ' VNĐ';
 
   drawPie();
   drawLineChart();
@@ -206,13 +247,22 @@ function drawPie() {
   const ctx = el('pieChart').getContext('2d');
   ctx.clearRect(0,0,160,160);
   const data = state.timeSplit;
-  const labels = [['Ngủ','sleep','#5af'],['Làm việc','work','#3a5'],['Tăng ca','overtime','#f90'],['Nghỉ ngơi','rest','#a5f']];
-  let total = data.sleep+data.work+data.overtime+data.rest;
+  const labels = [
+    ['Ngủ','sleep','#5af'],
+    ['Làm việc','work','#3a5'],
+    ['Tăng ca','overtime','#f90'],
+    ['Nghỉ ngơi','rest','#a5f'],
+    ['Cờ bạc','gamble','#e33']
+  ];
+  let total = (data.sleep||0)+(data.work||0)+(data.overtime||0)+(data.rest||0)+(data.gamble||0);
+  if (total === 0) total = 1;
   let start = -Math.PI/2;
   const legend = el('pieLegend');
   legend.innerHTML = '';
   labels.forEach(([name,key,color]) => {
-    let slice = (data[key]/total) * Math.PI*2;
+    const val = data[key] || 0;
+    if (val <= 0) return;
+    let slice = (val/total) * Math.PI*2;
     ctx.beginPath();
     ctx.moveTo(80,80);
     ctx.arc(80,80,70,start,start+slice);
@@ -220,7 +270,7 @@ function drawPie() {
     ctx.fillStyle = color;
     ctx.fill();
     start += slice;
-    legend.innerHTML += `<div><span class="swatch" style="background:${color}"></span>${name}: ${Math.round(data[key]/total*100)}%</div>`;
+    legend.innerHTML += `<div><span class="swatch" style="background:${color}"></span>${name}: ${Math.round(val/total*100)}%</div>`;
   });
 }
 
@@ -229,22 +279,18 @@ function drawLineChart() {
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
   ctx.clearRect(0,0,w,h);
-
   const hist = state.marketHistory.slice(-30);
   if (hist.length === 0) return;
-
   const padding = 20;
   const maxAbs = Math.max(10, ...hist.map(p => Math.abs(p.trend)));
   const zeroY = h/2;
   const scaleY = (h/2 - padding) / maxAbs;
   const stepX = (w - padding*2) / Math.max(1, hist.length - 1);
-
   ctx.strokeStyle = '#444';
   ctx.beginPath();
   ctx.moveTo(padding, zeroY);
   ctx.lineTo(w-padding, zeroY);
   ctx.stroke();
-
   ctx.strokeStyle = '#6cf';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -254,7 +300,6 @@ function drawLineChart() {
     if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
   });
   ctx.stroke();
-
   hist.forEach((p, i) => {
     const x = padding + i*stepX;
     const y = zeroY - p.trend*scaleY;
@@ -263,14 +308,12 @@ function drawLineChart() {
     ctx.arc(x,y,3,0,Math.PI*2);
     ctx.fill();
   });
-
   ctx.fillStyle = '#aaa';
   ctx.font = '11px sans-serif';
   const last = hist[hist.length-1];
   ctx.fillText(`Tuổi ${last.age}: ${last.trend>0?'+':''}${last.trend}%`, padding, 14);
 }
 
-// ====== GAME LOGIC ======
 function baseLifeStagePrompt() {
   let stageDesc = "";
   if (state.age <= 3) stageDesc = "Giai đoạn sơ sinh: chỉ ăn chơi, không có quyết định tài chính.";
@@ -305,25 +348,31 @@ Thông tin hiện tại:
 - Căng thẳng: ${state.stress}/100
 - Công việc: ${state.job}, lương năm: ${state.salary}
 - Đã kết hôn: ${state.married}, số con: ${state.children}
-- Trình độ học vấn: ${state.eduLevel}
 - Xu hướng thị trường chứng khoán năm nay: ${state.marketTrend}%
 - Lạm phát năm nay: ${state.inflation}%
 
-BẢNG MỨC LƯƠNG THAM KHẢO (bắt buộc chọn 1 trong các mốc này, KHÔNG được tự đặt lương ngoài khung):
+BẢNG MỨC LƯƠNG THAM KHẢO (bắt buộc chọn 1 trong các mốc, KHÔNG tự đặt lương ngoài khung):
 ${salaryTableText}
 
-Lưu ý: nếu nhân vật dưới 18 tuổi hoặc đang đi học chưa tốt nghiệp, chỉ nên chọn "lao_dong_pho_thong" (làm thêm) hoặc "khong_co_luong".
-Nếu kết hôn (action = kết_hôn), chi phí tổ chức đám cưới sẽ tự động random 20-40 triệu, tiền mừng cưới tự động random 10-30 triệu — bạn KHÔNG cần tự đặt "amount" cho action này.
+Quy tắc thuế thu nhập cá nhân (tự động áp dụng, AI không cần tính):
+- Lương ≥ 1 tỷ/năm: thuế 30%
+- Lương < 1 tỷ/năm và đang có nợ ngân hàng: miễn thuế
+- Lương < 1 tỷ/năm và không có nợ: thuế 10%
 
-Hãy đưa ra quyết định cho năm nay dưới dạng JSON THUẦN (không markdown, không giải thích thêm) theo format:
+Có thể chọn rút tiết kiệm tự do (action "rút_tiết_kiệm"), không bị phạt.
+Có thể mua xổ số (action "mua_xổ_số", amount = tiền mua vé, tỉ lệ trúng thấp nhưng thưởng lớn nếu trúng).
+Có thể chơi casino/cờ bạc (action "chơi_casino", amount = tiền đặt cược, rủi ro cao, có thể mất trắng hoặc thắng đậm). Nếu chơi casino, nhớ đưa "gamble" % vào time_split để phản ánh thời gian dành cho cờ bạc.
+Nếu kết hôn, chi phí đám cưới (20-40 triệu) và tiền mừng (10-30 triệu) tự động random, không cần đặt "amount".
+
+Hãy đưa ra quyết định cho năm nay dưới dạng JSON THUẦN (không markdown, không giải thích thêm):
 {
   "narrative": "mô tả ngắn gọn 1-2 câu chuyện xảy ra năm nay bằng tiếng Việt",
-  "reason": "lý do ngắn gọn AI chọn hành động này (1 câu, tiếng Việt)",
+  "reason": "lý do ngắn gọn AI chọn hành động này",
   "job": "tên công việc mới hoặc giữ nguyên",
   "salary_tier": "một trong: lao_dong_pho_thong, van_phong, chuyen_mon, quan_ly, hoac 'khong_co_luong'",
-  "action": "một trong: gửi_tiết_kiệm, đầu_tư_chứng_khoán, rút_chứng_khoán, vay_ngân_hàng, trả_nợ, nghỉ_ngơi, tăng_ca, học_thêm, kết_hôn, sinh_con, không_làm_gì",
-  "amount": số tiền liên quan đến action (VNĐ, có thể 0, KHÔNG áp dụng cho action kết_hôn),
-  "time_split": {"sleep": %, "work": %, "overtime": %, "rest": %} (tổng = 100),
+  "action": "một trong: gửi_tiết_kiệm, rút_tiết_kiệm, đầu_tư_chứng_khoán, rút_chứng_khoán, vay_ngân_hàng, trả_nợ, mua_xổ_số, chơi_casino, nghỉ_ngơi, tăng_ca, học_thêm, kết_hôn, sinh_con, không_làm_gì",
+  "amount": số tiền liên quan đến action (VNĐ, KHÔNG áp dụng cho kết_hôn),
+  "time_split": {"sleep": %, "work": %, "overtime": %, "rest": %, "gamble": %} (tổng = 100),
   "health_change": số thay đổi sức khỏe (-30 đến +20),
   "stress_change": số thay đổi căng thẳng (-20 đến +30)
 }
@@ -333,15 +382,8 @@ Chỉ trả về JSON, không thêm gì khác.
   try {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${GROQ_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.9
-      })
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
+      body: JSON.stringify({ model: GROQ_MODEL, messages: [{ role: "user", content: prompt }], temperature: 0.9 })
     });
     const data = await res.json();
     let text = data.choices?.[0]?.message?.content || "{}";
@@ -357,29 +399,20 @@ function applyEconomy() {
   state.marketTrend = Math.round((Math.random()*40 - 15));
   state.stock = state.stock * (1 + state.marketTrend/100);
   state.marketHistory.push({ age: state.age, trend: state.marketTrend });
-
   state.inflation = Math.max(1, Math.round(state.inflation + (Math.random()*4 - 2)));
   state.interestRate = Math.min(25, state.interestRate + (Math.random()*1 - 0.3));
-
   state.savings = state.savings * (1 + 0.05);
-
-  if (state.debt > 0) {
-    state.debt = state.debt * (1 + state.interestRate/100);
-  }
+  if (state.debt > 0) state.debt = state.debt * (1 + state.interestRate/100);
 }
 
 async function tick() {
-  if (state.age > 100) {
-    endLife();
-    return;
-  }
+  if (state.age > 100) { endLife(); return; }
 
   applyEconomy();
   const decision = await callGroqDecision();
 
   if (decision.job) state.job = decision.job;
 
-  // ====== XỬ LÝ LƯƠNG THEO BẢNG, KHÔNG CHO AI TỰ BỊA SỐ ======
   if (decision.salary_tier && decision.salary_tier !== "khong_co_luong" && SALARY_TABLE[decision.salary_tier]) {
     const tier = decision.salary_tier;
     if (state.currentTier !== tier || !state.salary) {
@@ -391,7 +424,19 @@ async function tick() {
     state.currentTier = null;
   }
 
-  state.cash += state.salary;
+  const taxAmount = calculateTax(state.salary, state.debt);
+  const netSalary = state.salary - taxAmount;
+  state.cash += netSalary;
+  state.totals.taxPaid += taxAmount;
+
+  let taxNote = "";
+  if (state.salary > 0) {
+    if (taxAmount > 0) {
+      taxNote = `💸 Thuế TNCN: ${fmt(taxAmount)} VNĐ (${state.salary >= TAX_THRESHOLD ? '30%' : '10%'}) | Lương ròng: ${fmt(netSalary)} VNĐ`;
+    } else if (state.debt > 0) {
+      taxNote = `✅ Miễn thuế TNCN (đang có nợ) | Lương ròng: ${fmt(netSalary)} VNĐ`;
+    }
+  }
 
   const amt = Number(decision.amount) || 0;
   let extra = "";
@@ -399,6 +444,11 @@ async function tick() {
     case "gửi_tiết_kiệm":
       state.cash -= amt; state.savings += amt; state.totals.saved += amt;
       extra = `Gửi tiết kiệm: ${fmt(amt)} VNĐ`; break;
+    case "rút_tiết_kiệm": {
+      const w = Math.min(amt, state.savings);
+      state.savings -= w; state.cash += w; state.totals.savingsWithdrawn += w;
+      extra = `Rút tiết kiệm: ${fmt(w)} VNĐ`; break;
+    }
     case "đầu_tư_chứng_khoán":
       state.cash -= amt; state.stock += amt; state.totals.invested += amt;
       extra = `Đầu tư chứng khoán: ${fmt(amt)} VNĐ`; break;
@@ -411,18 +461,33 @@ async function tick() {
     case "trả_nợ":
       state.debt = Math.max(0, state.debt - amt); state.cash -= amt; state.totals.repaid += amt;
       extra = `Trả nợ: ${fmt(amt)} VNĐ`; break;
+    case "mua_xổ_số": {
+      const cost = Math.min(amt, state.cash);
+      state.cash -= cost; state.totals.lottery += cost;
+      const { won, prize } = playLottery(cost);
+      if (won) { state.cash += prize; state.totals.lotteryWin += prize; }
+      extra = won ? `🎉 TRÚNG XỔ SỐ! Vé ${fmt(cost)} VNĐ → thắng ${fmt(prize)} VNĐ` : `Mua xổ số ${fmt(cost)} VNĐ, không trúng`;
+      break;
+    }
+    case "chơi_casino": {
+      const bet = Math.min(amt, state.cash);
+      const { won, result } = playCasino(bet);
+      state.cash += result;
+      state.totals.gamble += bet;
+      state.totals.gambleWin += result;
+      extra = won ? `🎰 Thắng casino: cược ${fmt(bet)} VNĐ, lãi ${fmt(result)} VNĐ` : `🎰 Thua casino: mất ${fmt(bet)} VNĐ`;
+      break;
+    }
     case "kết_hôn": {
       state.married = true;
       const weddingCost = randRange(WEDDING_COST_MIN, WEDDING_COST_MAX);
       const weddingGift = randRange(WEDDING_GIFT_MIN, WEDDING_GIFT_MAX);
-      state.cash -= weddingCost;
-      state.cash += weddingGift;
-      extra = `Chi phí tổ chức đám cưới: ${fmt(weddingCost)} VNĐ, tiền mừng nhận được: ${fmt(weddingGift)} VNĐ`;
+      state.cash -= weddingCost; state.cash += weddingGift;
+      extra = `Chi phí đám cưới: ${fmt(weddingCost)} VNĐ, tiền mừng: ${fmt(weddingGift)} VNĐ`;
       break;
     }
     case "sinh_con":
-      state.children += 1;
-      state.cash -= amt;
+      state.children += 1; state.cash -= amt;
       extra = `Chi phí sinh con: ${fmt(amt)} VNĐ`;
       break;
   }
@@ -431,20 +496,19 @@ async function tick() {
   state.health = Math.min(100, Math.max(0, state.health + (Number(decision.health_change)||0)));
   state.stress = Math.min(100, Math.max(0, state.stress + (Number(decision.stress_change)||0)));
 
-  const marketNote = `Thị trường năm nay: ${state.marketTrend>0?'+':''}${state.marketTrend}% | Lạm phát: ${state.inflation}% | Lương/năm: ${fmt(state.salary)} VNĐ`;
+  const marketNote = `Thị trường: ${state.marketTrend>0?'+':''}${state.marketTrend}% | Lạm phát: ${state.inflation}% | Lương/năm: ${fmt(state.salary)} VNĐ`;
   logEntry(
     decision.narrative || "Không có sự kiện đặc biệt năm nay.",
     { action: decision.action, amount: amt, salary_tier: decision.salary_tier, reason: decision.reason || '', health_change: decision.health_change, stress_change: decision.stress_change },
-    `${extra ? extra + ' | ' : ''}${marketNote}`
+    `${extra ? extra + ' | ' : ''}${taxNote ? taxNote + ' | ' : ''}${marketNote}`
   );
 
   if (state.health < 20) {
     if (Math.random() < 0.4) {
-      logSimple("🚨 ĐỘT QUỴ do sức khỏe quá yếu và không nghỉ ngơi đầy đủ!", true);
-      endLife();
-      return;
+      logSimple("🚨 ĐỘT QUỴ do sức khỏe quá yếu!", true);
+      endLife(); return;
     } else {
-      logSimple("⚠️ Sức khỏe nguy hiểm! Cần nghỉ ngơi ngay hoặc sẽ đột quỵ.", true);
+      logSimple("⚠️ Sức khỏe nguy hiểm! Cần nghỉ ngơi ngay.", true);
     }
   }
 
@@ -454,36 +518,20 @@ async function tick() {
 
 function endLife() {
   stop();
-  logSimple(`☠️ Kết thúc cuộc đời ở tuổi ${state.age}. Tài sản để lại: ${fmt(state.cash+state.savings+state.stock)} VNĐ, Nợ để lại: ${fmt(state.debt)} VNĐ`, true);
+  logSimple(`☠️ Kết thúc cuộc đời ở tuổi ${state.age}. Tài sản để lại: ${fmt(state.cash+state.savings+state.stock)} VNĐ, Nợ: ${fmt(state.debt)} VNĐ`, true);
 
   const inheritance = state.cash + state.savings + state.stock;
   const inheritedDebt = state.debt;
   const nextGen = state.generation + 1;
 
   state = {
-    generation: nextGen,
-    age: 1,
-    cash: inheritance,
-    savings: 0,
-    stock: 0,
-    debt: inheritedDebt,
-    interestRate: 5 + Math.random()*3,
-    health: 100,
-    stress: 0,
-    job: "Chưa có việc",
-    salary: 0,
-    currentTier: null,
-    status: "Ngủ",
-    married: false,
-    children: 0,
-    eduLevel: "Chưa học",
-    marketTrend: 0,
-    inflation: 3,
-    timeSplit: { sleep: 40, work: 30, overtime: 10, rest: 20 },
-    marketHistory: [],
-    totals: { saved: 0, invested: 0, withdrawn: 0, borrowed: 0, repaid: 0 }
+    generation: nextGen, age: 1, cash: inheritance, savings: 0, stock: 0, debt: inheritedDebt,
+    interestRate: 5 + Math.random()*3, health: 100, stress: 0, job: "Chưa có việc", salary: 0,
+    currentTier: null, status: "Ngủ", married: false, children: 0, eduLevel: "Chưa học",
+    marketTrend: 0, inflation: 3, timeSplit: { sleep: 40, work: 30, overtime: 10, rest: 20, gamble: 0 },
+    marketHistory: [], totals: { saved:0, savingsWithdrawn:0, invested:0, withdrawn:0, borrowed:0, repaid:0, taxPaid:0, lottery:0, lotteryWin:0, gamble:0, gambleWin:0 }
   };
-  logSimple(`👶 Thế hệ mới #${state.generation} bắt đầu, thừa kế ${fmt(inheritance)} VNĐ và ${fmt(inheritedDebt)} VNĐ nợ.`);
+  logSimple(`👶 Thế hệ mới #${state.generation}, thừa kế ${fmt(inheritance)} VNĐ và ${fmt(inheritedDebt)} VNĐ nợ.`);
   updateUI();
   start();
 }
@@ -502,10 +550,7 @@ function stop() {
   el('pauseBtn').disabled = true;
   clearInterval(timer);
 }
-function reset() {
-  stop();
-  location.reload();
-}
+function reset() { stop(); location.reload(); }
 
 el('startBtn').onclick = start;
 el('pauseBtn').onclick = stop;
