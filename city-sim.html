@@ -107,8 +107,8 @@
 
 <script>
 // ====== CẤU HÌNH ======
-const GROQ_API_KEY = "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"; // <-- thay bằng key thật
-const GROQ_MODEL = "openai/gpt-oss-20b";
+const GROQ_API_KEY = "kira_8f3abd4473d2a8c4a30b78e71aa1827f"; // <-- thay bằng key thật
+const GROQ_MODEL = "kira-mini-1.0";
 const TICK_MS = 15000; // 15s = 1 năm
 
 // ====== BẢNG LƯƠNG THAM KHẢO (VNĐ/năm) ======
@@ -331,7 +331,7 @@ Chỉ trả về JSON, không thêm gì khác.
 `;
 
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const res = await fetch("https://kiraai.vn/api/v1", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
