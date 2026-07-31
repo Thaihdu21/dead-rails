@@ -122,6 +122,7 @@
 const GROQ_API_KEY = "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";
 const GROQ_MODEL = "llama-3.1-8b-instant";
 const TICK_MS = 15000;
+const ADULT_AGE = 18; // mốc tuổi được phép thực hiện MỌI hành động tài chính
 
 // ====== BẢNG LƯƠNG ======
 const SALARY_TABLE = {
@@ -149,12 +150,12 @@ function calculateTax(salary, debt, rearingDebt) {
 const BASE_LIVING_COST = 40000000;
 const CHILD_LIVING_COST = 25000000;
 const CHILD_REARING_COST = 15000000;
-const REARING_DEBT_INTEREST_START_AGE = 30; // từ 30 tuổi bắt đầu tính lãi nếu chưa trả hết
-const REARING_DEBT_INTEREST_RATE = 8; // %/năm phạt
-const REARING_DEBT_FORCE_COLLECT_AGE = 40; // từ 40 tuổi cưỡng chế trừ lương
+const REARING_DEBT_INTEREST_START_AGE = 30;
+const REARING_DEBT_INTEREST_RATE = 8;
+const REARING_DEBT_FORCE_COLLECT_AGE = 40;
 
 function calculateLivingCost(age, children, inflation) {
-  if (age < 18) return 0;
+  if (age < ADULT_AGE) return 0;
   const inflationMultiplier = 1 + (inflation / 100);
   const base = BASE_LIVING_COST * inflationMultiplier;
   const childCost = children * CHILD_LIVING_COST * inflationMultiplier;
@@ -162,25 +163,38 @@ function calculateLivingCost(age, children, inflation) {
 }
 
 function calculateRearingCost(age, inflation) {
-  if (age >= 18) return 0;
+  if (age >= ADULT_AGE) return 0;
   return Math.round(CHILD_REARING_COST * (1 + inflation/100));
 }
 
-// ====== XỔ SỐ & CASINO ======
-const LOTTERY_WIN_CHANCE = 0.03;
-const LOTTERY_MULTIPLIER = 50;
+// ====== HỆ THỐNG TỰ TÍNH SỐ TIỀN THEO % (AI KHÔNG CÒN QUYẾT ĐỊNH AMOUNT) ======
+const MONEY_RULES = {
+  "gửi_tiết_kiệm":       (s) => Math.round(s.cash * 0.30),
+  "rút_tiết_kiệm":       (s) => Math.round(s.savings * 0.50),
+  "đầu_tư_chứng_khoán":  (s) => Math.round(s.cash * 0.25),
+  "rút_chứng_khoán":     (s) => Math.round(s.stock * 0.50),
+  "vay_ngân_hàng":       (s) => Math.round(Math.max(s.salary, 50000000) * 2),
+  "trả_nợ":              (s) => Math.min(Math.round(s.cash * 0.50), s.debt),
+  "trả_nợ_nuôi_dưỡng":   (s) => Math.min(Math.round(s.cash * 0.40), s.rearingDebt),
+  "mua_xổ_số":           (s) => Math.round(s.cash * 0.02),
+  "chơi_casino":         (s) => Math.round(s.cash * 0.10),
+  "sinh_con":            (s) => Math.round(s.cash * 0.15)
+};
+
+const FINANCIAL_ACTIONS = new Set([
+  "gửi_tiết_kiệm","rút_tiết_kiệm","đầu_tư_chứng_khoán","rút_chứng_khoán",
+  "vay_ngân_hàng","trả_nợ","trả_nợ_nuôi_dưỡng","mua_xổ_số","chơi_casino"
+]);
 
 function randRange(min, max) { return Math.round(min + Math.random() * (max - min)); }
 
 function playLottery(amount) {
-  const won = Math.random() < LOTTERY_WIN_CHANCE;
-  const prize = won ? amount * LOTTERY_MULTIPLIER : 0;
+  const won = Math.random() < 0.03;
+  const prize = won ? amount * 50 : 0;
   return { won, prize };
 }
-
 function playCasino(amount) {
-  const winChance = 0.45;
-  const won = Math.random() < winChance;
+  const won = Math.random() < 0.45;
   const result = won ? Math.round(amount * (1 + Math.random()*1.5)) : -amount;
   return { won, result };
 }
@@ -336,17 +350,17 @@ function drawLineChart() {
 
 function baseLifeStagePrompt() {
   let stageDesc = "";
-  if (state.age <= 3) stageDesc = "Giai đoạn sơ sinh: chỉ ăn chơi, không có quyết định tài chính. Ngân hàng nuôi dưỡng toàn bộ, không tính lãi.";
-  else if (state.age <= 8) stageDesc = "Giai đoạn thiếu nhi: học tập, ăn, chơi. Không có thu nhập. Ngân hàng vẫn nuôi dưỡng, không tính lãi.";
-  else if (state.age <= 17) stageDesc = "Giai đoạn thiếu niên: bắt đầu lo tương lai. KHÔNG được nhận lương dù có đi làm thêm (dưới 18 tuổi).";
-  else if (state.age === 18) stageDesc = "Vừa đủ 18 tuổi: bắt đầu được nhận lương thật sự, phải bắt đầu trả nợ nuôi dưỡng từ nhỏ và tự lo chi phí sinh hoạt.";
-  else if (state.age <= 20) stageDesc = "Đang học đại học + đi làm thêm, cần đóng học phí, tự lo sinh hoạt phí.";
-  else if (state.age === 21) stageDesc = "Có thể tốt nghiệp nếu đã chăm học và đủ tiền học phí, hoặc chọn đi làm lương thấp, hoặc học lại.";
-  else if (state.age < 30) stageDesc = "Người trưởng thành trẻ: đi làm, tích lũy, đầu tư, trả nợ. LƯU Ý: từ 30 tuổi nếu chưa trả hết nợ nuôi dưỡng, khoản nợ này sẽ bắt đầu bị tính lãi phạt.";
-  else if (state.age < 35) stageDesc = "Áp lực kết hôn tăng cao, cần chi trả đám cưới, có thể nhận tiền mừng.";
-  else if (state.age < 40) stageDesc = "Có thể có con, áp lực nuôi con. CẢNH BÁO: nợ nuôi dưỡng đang bị tính lãi nếu chưa trả hết, và từ 40 tuổi sẽ bị cưỡng chế trừ thẳng vào lương nếu vẫn còn nợ.";
-  else if (state.age < 60) stageDesc = "Tuổi trung niên, áp lực tài chính gia đình. Nếu còn nợ nuôi dưỡng, hệ thống sẽ TỰ ĐỘNG cưỡng chế trừ vào lương mỗi năm, không cần AI quyết định.";
-  else if (state.age < 90) stageDesc = "Tuổi cao niên: chuẩn bị nghỉ hưu, quản lý tài sản.";
+  if (state.age <= 3) stageDesc = "Giai đoạn sơ sinh: chỉ ăn chơi. Ngân hàng nuôi dưỡng toàn bộ, không tính lãi. KHÔNG được thực hiện bất kỳ hành động tài chính nào.";
+  else if (state.age <= 8) stageDesc = "Giai đoạn thiếu nhi: học tập, ăn, chơi. KHÔNG được thực hiện bất kỳ hành động tài chính nào.";
+  else if (state.age <= 17) stageDesc = "Giai đoạn thiếu niên: lo tương lai, học tập. KHÔNG được thực hiện BẤT KỲ hành động tài chính nào (gửi/rút tiết kiệm, đầu tư, vay, xổ số, casino đều bị khóa cho tới 18 tuổi).";
+  else if (state.age === 18) stageDesc = "Vừa đủ 18 tuổi: TỪ NĂM NAY được phép thực hiện mọi hành động tài chính. Bắt đầu phải trả nợ nuôi dưỡng và tự lo sinh hoạt phí.";
+  else if (state.age <= 20) stageDesc = "Đang học đại học + đi làm thêm.";
+  else if (state.age === 21) stageDesc = "Có thể tốt nghiệp hoặc đi làm lương thấp, hoặc học lại.";
+  else if (state.age < 30) stageDesc = "Người trưởng thành trẻ: đi làm, tích lũy, đầu tư. Từ 30 tuổi nợ nuôi dưỡng chưa trả hết sẽ bị tính lãi.";
+  else if (state.age < 35) stageDesc = "Áp lực kết hôn, chi phí đám cưới, tiền mừng.";
+  else if (state.age < 40) stageDesc = "Có thể có con. CẢNH BÁO: nợ nuôi dưỡng đang bị tính lãi nếu chưa trả hết, từ 40 tuổi sẽ bị cưỡng chế trừ lương.";
+  else if (state.age < 60) stageDesc = "Trung niên. Nếu còn nợ nuôi dưỡng, hệ thống TỰ ĐỘNG cưỡng chế trừ lương mỗi năm.";
+  else if (state.age < 90) stageDesc = "Cao niên: chuẩn bị nghỉ hưu.";
   else stageDesc = "Cuối đời: chuẩn bị để lại tài sản/nợ cho thế hệ sau.";
   return stageDesc;
 }
@@ -356,48 +370,47 @@ async function callGroqDecision() {
     .map(([key, v]) => `- ${key}: ${v.label}, ${fmt(v.min)} - ${fmt(v.max)} VNĐ/năm`)
     .join('\n');
 
+  const isMinor = state.age < ADULT_AGE;
+
   const prompt = `
 Bạn là một AI đang mô phỏng MỘT NĂM trong cuộc đời của một nhân vật, hiện tại nhân vật ${state.age} tuổi.
 Giai đoạn hiện tại: ${baseLifeStagePrompt()}
 
 Thông tin hiện tại:
-- Tiền mặt: ${state.cash} VNĐ (đây là GIỚI HẠN TỐI ĐA cho mọi khoản chi trong năm nay, hệ thống sẽ tự động cắt bớt nếu bạn ghi số vượt quá số này)
+- Tiền mặt: ${state.cash} VNĐ
 - Tiết kiệm ngân hàng: ${state.savings} VNĐ
 - Đầu tư chứng khoán: ${state.stock} VNĐ
 - Nợ vay ngân hàng (có lãi): ${state.debt} VNĐ (lãi suất ${state.interestRate}%/năm)
-- Nợ nuôi dưỡng: ${state.rearingDebt} VNĐ ${state.age >= REARING_DEBT_INTEREST_START_AGE ? `(ĐANG bị tính lãi phạt ${REARING_DEBT_INTEREST_RATE}%/năm vì chưa trả hết)` : '(chưa tính lãi)'}
+- Nợ nuôi dưỡng: ${state.rearingDebt} VNĐ ${state.age >= REARING_DEBT_INTEREST_START_AGE ? `(ĐANG bị tính lãi phạt ${REARING_DEBT_INTEREST_RATE}%/năm)` : ''}
 - Sức khỏe: ${state.health}/100
 - Căng thẳng: ${state.stress}/100
 - Công việc: ${state.job}, lương năm: ${state.salary}
 - Đã kết hôn: ${state.married}, số con: ${state.children}
-- Xu hướng thị trường chứng khoán năm nay: ${state.marketTrend}%
+- Thị trường chứng khoán năm nay: ${state.marketTrend}%
 - Lạm phát năm nay: ${state.inflation}%
 
-BẢNG MỨC LƯƠNG THAM KHẢO (bắt buộc chọn 1 trong các mốc):
+BẢNG MỨC LƯƠNG THAM KHẢO:
 ${salaryTableText}
 LƯU Ý: nếu dưới 18 tuổi, lương THỰC NHẬN luôn là 0 VNĐ dù chọn tier nào.
 
-QUY TẮC QUAN TRỌNG VỀ TIỀN (hệ thống tự động kiểm soát, không cần AI tự validate):
-- MỌI action tốn tiền (gửi_tiết_kiệm, đầu_tư_chứng_khoán, mua_xổ_số, chơi_casino, trả_nợ, trả_nợ_nuôi_dưỡng) sẽ bị hệ thống TỰ ĐỘNG giới hạn không vượt quá tiền mặt hiện có.
-- Nếu tiền mặt ≤ 0, các action tốn tiền sẽ KHÔNG thực hiện được — hãy ưu tiên chọn rút_tiết_kiệm, rút_chứng_khoán, vay_ngân_hàng, hoặc nghỉ_ngơi/không_làm_gì thay vào đó.
-- Từ tuổi 40, nếu còn nợ nuôi dưỡng, hệ thống sẽ TỰ ĐỘNG cưỡng chế trừ vào lương mỗi năm — AI KHÔNG cần và KHÔNG THỂ tự ý định đoạt phần này.
+QUAN TRỌNG - QUY TẮC TIỀN BẠC: Bạn KHÔNG cần và KHÔNG ĐƯỢC tự chọn số tiền cụ thể (không có field "amount"). Hệ thống sẽ TỰ ĐỘNG tính số tiền chính xác cho mỗi action dựa trên tỷ lệ % cố định so với tài sản hiện có của nhân vật. Bạn chỉ cần chọn ĐÚNG loại action phù hợp với hoàn cảnh, hệ thống lo phần còn lại.
+
+${isMinor ? `⛔ NHÂN VẬT DƯỚI 18 TUỔI: TUYỆT ĐỐI KHÔNG được chọn bất kỳ action tài chính nào sau đây: gửi_tiết_kiệm, rút_tiết_kiệm, đầu_tư_chứng_khoán, rút_chứng_khoán, vay_ngân_hàng, trả_nợ, trả_nợ_nuôi_dưỡng, mua_xổ_số, chơi_casino. Chỉ được chọn: nghỉ_ngơi, học_thêm, không_làm_gì.` : `✅ Nhân vật đã đủ 18 tuổi, được phép chọn mọi action tài chính.`}
 
 Quy tắc thuế (tự động áp dụng):
 - Lương ≥ 1 tỷ/năm: thuế 30%
-- Lương < 1 tỷ/năm và còn nợ vay ngân hàng HOẶC còn nợ nuôi dưỡng: miễn thuế
-- Lương < 1 tỷ/năm và không còn nợ nào: thuế 10%
+- Lương < 1 tỷ/năm và còn nợ (vay hoặc nuôi dưỡng): miễn thuế
+- Lương < 1 tỷ/năm và không còn nợ: thuế 10%
 
-Có thể rút tiết kiệm/chứng khoán tự do (không phạt).
-Nếu kết hôn, chi phí (20-40tr) và tiền mừng (10-30tr) tự động random, không cần đặt "amount".
+Nếu kết hôn, chi phí và tiền mừng tự động random, không cần quan tâm số tiền.
 
-Trả về JSON THUẦN (không markdown):
+Trả về JSON THUẦN (không markdown, KHÔNG có field "amount"):
 {
   "narrative": "mô tả ngắn gọn 1-2 câu bằng tiếng Việt",
   "reason": "lý do ngắn gọn",
   "job": "tên công việc",
   "salary_tier": "lao_dong_pho_thong | van_phong | chuyen_mon | quan_ly | khong_co_luong",
   "action": "gửi_tiết_kiệm | rút_tiết_kiệm | đầu_tư_chứng_khoán | rút_chứng_khoán | vay_ngân_hàng | trả_nợ | trả_nợ_nuôi_dưỡng | mua_xổ_số | chơi_casino | nghỉ_ngơi | tăng_ca | học_thêm | kết_hôn | sinh_con | không_làm_gì",
-  "amount": số tiền mong muốn (VNĐ, hệ thống sẽ tự cắt nếu vượt quá tiền mặt),
   "time_split": {"sleep": %, "work": %, "overtime": %, "rest": %, "gamble": %} (tổng = 100),
   "health_change": -30 đến +20,
   "stress_change": -20 đến +30
@@ -417,7 +430,7 @@ Chỉ trả về JSON.
     return JSON.parse(text);
   } catch (e) {
     console.error("Groq error", e);
-    return { narrative: "AI không thể quyết định năm nay (lỗi kết nối).", reason:"Lỗi API", action: "không_làm_gì", amount:0, time_split:state.timeSplit, health_change:-5, stress_change:5, salary_tier: "khong_co_luong", job: state.job };
+    return { narrative: "AI không thể quyết định năm nay (lỗi kết nối).", reason:"Lỗi API", action: "không_làm_gì", time_split:state.timeSplit, health_change:-5, stress_change:5, salary_tier: "khong_co_luong", job: state.job };
   }
 }
 
@@ -429,16 +442,9 @@ function applyEconomy() {
   state.interestRate = Math.min(25, state.interestRate + (Math.random()*1 - 0.3));
   state.savings = state.savings * (1 + 0.05);
   if (state.debt > 0) state.debt = state.debt * (1 + state.interestRate/100);
-
-  // ====== NỢ NUÔI DƯỠNG BẮT ĐẦU TÍNH LÃI TỪ 30 TUỔI NẾU CHƯA TRẢ HẾT ======
   if (state.age >= REARING_DEBT_INTEREST_START_AGE && state.rearingDebt > 0) {
     state.rearingDebt = state.rearingDebt * (1 + REARING_DEBT_INTEREST_RATE/100);
   }
-}
-
-// Giới hạn amount không vượt quá cash hiện có (dùng cho mọi action tốn tiền)
-function clampToCash(amount) {
-  return Math.max(0, Math.min(Number(amount)||0, state.cash));
 }
 
 async function tick() {
@@ -446,13 +452,14 @@ async function tick() {
 
   applyEconomy();
   const decision = await callGroqDecision();
+  const isMinor = state.age < ADULT_AGE;
 
   if (decision.job) state.job = decision.job;
 
   // ====== XỬ LÝ LƯƠNG (chặn cứng dưới 18 tuổi) ======
   if (decision.salary_tier && decision.salary_tier !== "khong_co_luong" && SALARY_TABLE[decision.salary_tier]) {
     const tier = decision.salary_tier;
-    if (state.age < 18) {
+    if (isMinor) {
       state.salary = 0;
       state.currentTier = null;
     } else {
@@ -470,21 +477,21 @@ async function tick() {
   let netSalary = state.salary - taxAmount;
   state.totals.taxPaid += taxAmount;
 
-  // ====== CƯỠNG CHẾ TRỪ NỢ NUÔI DƯỠNG TỪ 40 TUỔI (ưu tiên trước khi cash nhận lương) ======
+  // ====== CƯỠNG CHẾ TRỪ NỢ NUÔI DƯỠNG TỪ 40 TUỔI ======
   let forcedCollectionNote = "";
   if (state.age >= REARING_DEBT_FORCE_COLLECT_AGE && state.rearingDebt > 0 && netSalary > 0) {
     const forced = Math.min(netSalary, state.rearingDebt);
     state.rearingDebt -= forced;
     netSalary -= forced;
     state.totals.rearingRepaid += forced;
-    forcedCollectionNote = `⚖️ CƯỠNG CHẾ trừ lương trả nợ nuôi dưỡng: ${fmt(forced)} VNĐ (còn lại ${fmt(state.rearingDebt)} VNĐ)`;
+    forcedCollectionNote = `⚖️ CƯỠNG CHẾ trừ lương trả nợ nuôi dưỡng: ${fmt(forced)} VNĐ (còn ${fmt(state.rearingDebt)} VNĐ)`;
   }
 
   state.cash += netSalary;
 
-  // ====== CHI PHÍ SINH HOẠT / NỢ NUÔI DƯỠNG (dưới 18 tuổi) ======
+  // ====== CHI PHÍ SINH HOẠT / NỢ NUÔI DƯỠNG ======
   let livingNote = "";
-  if (state.age < 18) {
+  if (isMinor) {
     const rearingCost = calculateRearingCost(state.age, state.inflation);
     state.rearingDebt += rearingCost;
     livingNote = `🏦 Ngân hàng ứng nuôi dưỡng: +${fmt(rearingCost)} VNĐ (không lãi)`;
@@ -493,7 +500,6 @@ async function tick() {
       state.rearingDebtLocked = true;
       livingNote = `📜 Đủ 18 tuổi: bắt đầu phải trả nợ nuôi dưỡng ${fmt(state.rearingDebt)} VNĐ | `;
     }
-    // Chi phí sinh hoạt cũng bị giới hạn không vượt quá cash hiện có + lương vừa nhận
     const livingCostRaw = calculateLivingCost(state.age, state.children, state.inflation);
     const livingCost = Math.max(0, Math.min(livingCostRaw, state.cash));
     state.cash -= livingCost;
@@ -502,70 +508,56 @@ async function tick() {
   }
 
   let taxNote = "";
-  if (state.salary > 0) {
-    if (state.age < 18) {
-      taxNote = `⚠️ Dưới 18 tuổi: không nhận lương dù chọn đi làm`;
-    } else if (taxAmount > 0) {
-      taxNote = `💸 Thuế TNCN: ${fmt(taxAmount)} VNĐ (${state.salary >= TAX_THRESHOLD ? '30%' : '10%'})`;
-    } else if (state.debt > 0 || state.rearingDebt > 0) {
-      taxNote = `✅ Miễn thuế (còn nợ)`;
-    }
+  if (state.salary > 0 && !isMinor) {
+    if (taxAmount > 0) taxNote = `💸 Thuế TNCN: ${fmt(taxAmount)} VNĐ`;
+    else taxNote = `✅ Miễn thuế (còn nợ)`;
   }
 
-  // ====== XỬ LÝ ACTION — TẤT CẢ ĐỀU CLAMP THEO CASH HIỆN CÓ ======
+  // ====== XỬ LÝ ACTION — SỐ TIỀN DO HỆ THỐNG TỰ TÍNH, AI KHÔNG QUYẾT ĐỊNH ======
   let extra = "";
-  const cashBefore = state.cash;
+  let action = decision.action;
 
-  if (state.cash <= 0 && ["gửi_tiết_kiệm","đầu_tư_chứng_khoán","mua_xổ_số","chơi_casino","trả_nợ","trả_nợ_nuôi_dưỡng"].includes(decision.action)) {
-    extra = `❌ Không đủ tiền mặt (${fmt(state.cash)} VNĐ) — không thể thực hiện "${decision.action}"`;
+  // Chặn cứng mọi action tài chính nếu dưới 18 tuổi, ép về "không_làm_gì"
+  if (isMinor && FINANCIAL_ACTIONS.has(action)) {
+    extra = `⛔ Dưới 18 tuổi: không được thực hiện "${action}", hành động bị hủy`;
+    action = "không_làm_gì";
+  }
+
+  if (!isMinor && FINANCIAL_ACTIONS.has(action) && state.cash <= 0 && action !== "rút_tiết_kiệm" && action !== "rút_chứng_khoán" && action !== "vay_ngân_hàng") {
+    extra = `❌ Không đủ tiền mặt (${fmt(state.cash)} VNĐ) — không thể thực hiện "${action}"`;
   } else {
-    const amt = clampToCash(decision.amount);
-    switch (decision.action) {
+    const calc = MONEY_RULES[action];
+    const amt = calc ? Math.max(0, calc(state)) : 0;
+
+    switch (action) {
       case "gửi_tiết_kiệm":
-        if (amt > 0) {
-          state.cash -= amt; state.savings += amt; state.totals.saved += amt;
-          extra = `Gửi tiết kiệm: ${fmt(amt)} VNĐ`;
-        } else extra = `Không đủ tiền để gửi tiết kiệm`;
+        if (amt > 0) { state.cash -= amt; state.savings += amt; state.totals.saved += amt; extra = `Gửi tiết kiệm: ${fmt(amt)} VNĐ (30% tiền mặt)`; }
+        else extra = `Không đủ tiền để gửi tiết kiệm`;
         break;
-      case "rút_tiết_kiệm": {
-        const w = Math.max(0, Math.min(Number(decision.amount)||0, state.savings));
-        state.savings -= w; state.cash += w; state.totals.savingsWithdrawn += w;
-        extra = `Rút tiết kiệm: ${fmt(w)} VNĐ`; break;
-      }
+      case "rút_tiết_kiệm":
+        if (amt > 0) { state.savings -= amt; state.cash += amt; state.totals.savingsWithdrawn += amt; extra = `Rút tiết kiệm: ${fmt(amt)} VNĐ (50% số dư)`; }
+        else extra = `Không còn tiết kiệm để rút`;
+        break;
       case "đầu_tư_chứng_khoán":
-        if (amt > 0) {
-          state.cash -= amt; state.stock += amt; state.totals.invested += amt;
-          extra = `Đầu tư chứng khoán: ${fmt(amt)} VNĐ`;
-        } else extra = `Không đủ tiền để đầu tư`;
+        if (amt > 0) { state.cash -= amt; state.stock += amt; state.totals.invested += amt; extra = `Đầu tư chứng khoán: ${fmt(amt)} VNĐ (25% tiền mặt)`; }
+        else extra = `Không đủ tiền để đầu tư`;
         break;
-      case "rút_chứng_khoán": {
-        const w = Math.max(0, Math.min(Number(decision.amount)||0, state.stock));
-        state.stock -= w; state.cash += w; state.totals.withdrawn += w;
-        extra = `Rút chứng khoán: ${fmt(w)} VNĐ`; break;
-      }
-      case "vay_ngân_hàng": {
-        const v = Math.max(0, Number(decision.amount)||0);
-        state.debt += v; state.cash += v; state.totals.borrowed += v;
-        extra = `Vay ngân hàng: ${fmt(v)} VNĐ`; break;
-      }
-      case "trả_nợ": {
-        const r = Math.min(amt, state.debt);
-        if (r > 0) {
-          state.debt -= r; state.cash -= r; state.totals.repaid += r;
-          extra = `Trả nợ vay: ${fmt(r)} VNĐ`;
-        } else extra = `Không đủ tiền hoặc không còn nợ vay`;
+      case "rút_chứng_khoán":
+        if (amt > 0) { state.stock -= amt; state.cash += amt; state.totals.withdrawn += amt; extra = `Rút chứng khoán: ${fmt(amt)} VNĐ (50% số dư)`; }
+        else extra = `Không còn chứng khoán để rút`;
         break;
-      }
-      case "trả_nợ_nuôi_dưỡng": {
-        if (state.age < 18) { extra = `Chưa đủ 18 tuổi, chưa cần trả`; break; }
-        const r = Math.min(amt, state.rearingDebt);
-        if (r > 0) {
-          state.rearingDebt -= r; state.cash -= r; state.totals.rearingRepaid += r;
-          extra = `Trả nợ nuôi dưỡng: ${fmt(r)} VNĐ (còn ${fmt(state.rearingDebt)} VNĐ)`;
-        } else extra = `Không đủ tiền hoặc đã trả hết nợ nuôi dưỡng`;
+      case "vay_ngân_hàng":
+        state.debt += amt; state.cash += amt; state.totals.borrowed += amt;
+        extra = `Vay ngân hàng: ${fmt(amt)} VNĐ (200% lương năm)`; break;
+      case "trả_nợ":
+        if (amt > 0) { state.debt -= amt; state.cash -= amt; state.totals.repaid += amt; extra = `Trả nợ vay: ${fmt(amt)} VNĐ`; }
+        else extra = `Không đủ tiền hoặc không còn nợ vay`;
         break;
-      }
-      case "mua_xổ_số": {
+      case "trả_nợ_nuôi_dưỡng":
+        if (amt > 0) { state.rearingDebt -= amt; state.cash -= amt; state.totals.rearingRepaid += amt; extra = `Trả nợ nuôi dưỡng: ${fmt(amt)} VNĐ (còn ${fmt(state.rearingDebt)} VNĐ)`; }
+        else extra = `Không đủ tiền hoặc đã trả hết`;
+        break;
+      case "mua_xổ_số":
         if (amt > 0) {
           state.cash -= amt; state.totals.lottery += amt;
           const { won, prize } = playLottery(amt);
@@ -573,29 +565,24 @@ async function tick() {
           extra = won ? `🎉 TRÚNG XỔ SỐ! Vé ${fmt(amt)} VNĐ → thắng ${fmt(prize)} VNĐ` : `Mua xổ số ${fmt(amt)} VNĐ, không trúng`;
         } else extra = `Không đủ tiền mua xổ số`;
         break;
-      }
-      case "chơi_casino": {
+      case "chơi_casino":
         if (amt > 0) {
           const { won, result } = playCasino(amt);
-          state.cash += result;
-          state.totals.gamble += amt;
-          state.totals.gambleWin += result;
+          state.cash += result; state.totals.gamble += amt; state.totals.gambleWin += result;
           extra = won ? `🎰 Thắng casino: cược ${fmt(amt)} VNĐ, lãi ${fmt(result)} VNĐ` : `🎰 Thua casino: mất ${fmt(amt)} VNĐ`;
         } else extra = `Không đủ tiền chơi casino`;
         break;
-      }
       case "kết_hôn": {
         const weddingCost = Math.min(randRange(WEDDING_COST_MIN, WEDDING_COST_MAX), state.cash);
         const weddingGift = randRange(WEDDING_GIFT_MIN, WEDDING_GIFT_MAX);
-        state.married = true;
-        state.cash -= weddingCost; state.cash += weddingGift;
+        state.married = true; state.cash -= weddingCost; state.cash += weddingGift;
         extra = `Chi phí đám cưới: ${fmt(weddingCost)} VNĐ, tiền mừng: ${fmt(weddingGift)} VNĐ`;
         break;
       }
       case "sinh_con": {
-        const c = Math.min(amt, state.cash);
-        state.children += 1; state.cash -= c;
-        extra = `Chi phí sinh con: ${fmt(c)} VNĐ`;
+        const childCost = Math.min(Math.round(state.cash * 0.15), state.cash);
+        state.children += 1; state.cash -= childCost;
+        extra = `Chi phí sinh con: ${fmt(childCost)} VNĐ`;
         break;
       }
     }
@@ -608,7 +595,7 @@ async function tick() {
   const marketNote = `Thị trường: ${state.marketTrend>0?'+':''}${state.marketTrend}% | Lạm phát: ${state.inflation}% | Lương/năm: ${fmt(state.salary)} VNĐ`;
   logEntry(
     decision.narrative || "Không có sự kiện đặc biệt năm nay.",
-    { action: decision.action, amount_requested: decision.amount, salary_tier: decision.salary_tier, reason: decision.reason || '' },
+    { action: decision.action, salary_tier: decision.salary_tier, reason: decision.reason || '' },
     `${extra ? extra + ' | ' : ''}${forcedCollectionNote ? forcedCollectionNote + ' | ' : ''}${taxNote ? taxNote + ' | ' : ''}${livingNote ? livingNote + ' | ' : ''}${marketNote}`
   );
 
@@ -628,7 +615,7 @@ async function tick() {
 function endLife() {
   stop();
   const totalDebt = state.debt + state.rearingDebt;
-  logSimple(`☠️ Kết thúc cuộc đời ở tuổi ${state.age}. Tài sản để lại: ${fmt(state.cash+state.savings+state.stock)} VNĐ, Nợ để lại: ${fmt(totalDebt)} VNĐ`, true);
+  logSimple(`☠️ Kết thúc cuộc đời ở tuổi ${state.age}. Tài sản để lại: ${fmt(state.cash+state.savings+state.stock)} VNĐ, Nợ: ${fmt(totalDebt)} VNĐ`, true);
 
   const inheritance = Math.max(0, state.cash + state.savings + state.stock);
   const nextGen = state.generation + 1;
