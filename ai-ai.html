@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI vs AI - Khám phá nhau</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 {
+    margin: 20px 0 6px;
+    font-size: 1.8rem;
+    background: linear-gradient(90deg, #7c3aed, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+  .setup {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+  input[type="text"] {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 0.95rem;
+    width: 320px;
+  }
+  select {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 0.95rem;
+  }
+  button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+  button:hover { opacity: 0.85; }
+  #startBtn {
+    background: linear-gradient(90deg, #7c3aed, #2563eb);
+    color: #fff;
+  }
+  #stopBtn {
+    background: #dc2626;
+    color: #fff;
+    display: none;
+  }
+  #clearBtn {
+    background: #374151;
+    color: #fff;
+  }
+
+  .arena {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    max-width: 1100px;
+    flex: 1;
+  }
+
+  .agent-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .agent-header {
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  .agent-a .agent-header { background: #1e1b4b; border: 1px solid #4c1d95; }
+  .agent-b .agent-header { background: #1e3a5f; border: 1px solid #1d4ed8; }
+
+  .dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .agent-a .dot { background: #7c3aed; }
+  .agent-b .dot { background: #2563eb; }
+
+  .thinking-indicator {
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 400;
+    margin-left: auto;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .model-badge {
+    font-size: 0.7rem;
+    background: #2d2d44;
+    padding: 2px 8px;
+    border-radius: 20px;
+    color: #aaa;
+    margin-left: 4px;
+  }
+
+  .chat-log {
+    flex: 1;
+    background: #12121f;
+    border: 1px solid #2a2a3d;
+    border-radius: 12px;
+    padding: 14px;
+    overflow-y: auto;
+    max-height: 65vh;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .message {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    max-width: 100%;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+  .msg-a {
+    background: #1e1b4b;
+    border-left: 3px solid #7c3aed;
+    align-self: flex-start;
+  }
+  .msg-b {
+    background: #1e3a5f;
+    border-left: 3px solid #2563eb;
+    align-self: flex-start;
+  }
+  .msg-system {
+    background: #1a1a1a;
+    border-left: 3px solid #555;
+    color: #777;
+    font-style: italic;
+    font-size: 0.8rem;
+  }
+  .msg-turn {
+    font-size: 0.72rem;
+    color: #666;
+    margin-bottom: 3px;
+  }
+
+  .center-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 70px;
+    gap: 16px;
+    min-width: 80px;
+  }
+
+  .vs-badge {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #555;
+    letter-spacing: 2px;
+  }
+
+  .turn-counter {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    color: #aaa;
+    text-align: center;
+  }
+  .turn-counter span { display: block; font-size: 1.4rem; font-weight: 700; color: #fff; }
+
+  .status-bar {
+    width: 100%;
+    max-width: 1100px;
+    margin-top: 12px;
+    background: #1a1a2e;
+    border: 1px solid #2a2a3d;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.82rem;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #555;
+  }
+  .status-dot.active { background: #22c55e; animation: blink 1s infinite; }
+
+  .delay-label { color: #666; font-size: 0.75rem; }
+</style>
+</head>
+<body>
+
+<h1>🤖 AI vs AI</h1>
+<p class="subtitle">Hai AI khám phá nhau — không có system prompt</p>
+
+<div class="setup">
+  <input type="text" id="apiKey" placeholder="🔑 Groq API Key..." />
+  <select id="modelA">
+    <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
+    <option value="llama-3.1-8b-instant">Llama 3.1 8B</option>
+    <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+    <option value="gemma2-9b-it">Gemma 2 9B</option>
+    <option value="deepseek-r1-distill-llama-70b">DeepSeek R1 70B</option>
+  </select>
+  <select id="modelB">
+    <option value="gemma2-9b-it">Gemma 2 9B</option>
+    <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
+    <option value="llama-3.1-8b-instant">Llama 3.1 8B</option>
+    <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+    <option value="deepseek-r1-distill-llama-70b">DeepSeek R1 70B</option>
+  </select>
+  <select id="delaySelect">
+    <option value="1500">Delay: 1.5s</option>
+    <option value="800">Delay: 0.8s</option>
+    <option value="3000">Delay: 3s</option>
+    <option value="5000">Delay: 5s</option>
+  </select>
+  <button id="startBtn" onclick="startConversation()">▶ Bắt đầu</button>
+  <button id="stopBtn" onclick="stopConversation()">⏹ Dừng</button>
+  <button id="clearBtn" onclick="clearAll()">🗑 Xoá</button>
+</div>
+
+<div class="arena">
+  <!-- Agent A -->
+  <div class="agent-col agent-a">
+    <div class="agent-header">
+      <div class="dot"></div>
+      <div>
+        Agent A
+        <span class="model-badge" id="badgeA">—</span>
+      </div>
+      <span class="thinking-indicator" id="thinkA" style="display:none">✦ đang suy nghĩ…</span>
+    </div>
+    <div class="chat-log" id="logA"></div>
+  </div>
+
+  <div class="center-col">
+    <div class="vs-badge">VS</div>
+    <div class="turn-counter">Lượt<span id="turnCount">0</span></div>
+  </div>
+
+  <!-- Agent B -->
+  <div class="agent-col agent-b">
+    <div class="agent-header">
+      <div class="dot"></div>
+      <div>
+        Agent B
+        <span class="model-badge" id="badgeB">—</span>
+      </div>
+      <span class="thinking-indicator" id="thinkB" style="display:none">✦ đang suy nghĩ…</span>
+    </div>
+    <div class="chat-log" id="logB"></div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="status-dot" id="statusDot"></div>
+  <span id="statusText">Chưa bắt đầu. Nhập API key và nhấn Bắt đầu.</span>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────
+  let historyA = [];   // messages từ góc nhìn A: A là "assistant", B là "user"
+  let historyB = [];   // messages từ góc nhìn B: B là "assistant", A là "user"
+  let running = false;
+  let turnCount = 0;
+  let timeoutId = null;
+
+  // ── Helpers ────────────────────────────────────────────────────────
+  function addMsg(log, text, cls, turnLabel) {
+    const wrap = document.createElement('div');
+    if (turnLabel) {
+      const tl = document.createElement('div');
+      tl.className = 'msg-turn';
+      tl.textContent = turnLabel;
+      wrap.appendChild(tl);
+    }
+    const msg = document.createElement('div');
+    msg.className = `message ${cls}`;
+    msg.textContent = text;
+    wrap.appendChild(msg);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setStatus(text, active = false) {
+    document.getElementById('statusText').textContent = text;
+    document.getElementById('statusDot').className = 'status-dot' + (active ? ' active' : '');
+  }
+
+  function setThinking(agent, show) {
+    document.getElementById(agent === 'A' ? 'thinkA' : 'thinkB').style.display = show ? 'inline' : 'none';
+  }
+
+  // ── Groq API call (no system prompt) ──────────────────────────────
+  async function callGroq(apiKey, model, messages) {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages,           // no system message — pure history
+        max_tokens: 300,
+        temperature: 0.9
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return data.choices[0].message.content.trim();
+  }
+
+  // ── Conversation loop ──────────────────────────────────────────────
+  async function tick() {
+    if (!running) return;
+
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const modelA = document.getElementById('modelA').value;
+    const modelB = document.getElementById('modelB').value;
+    const delay  = parseInt(document.getElementById('delaySelect').value);
+
+    // Random chọn ai nói trước lượt này (sau lượt đầu)
+    // Lượt đầu: A bắt đầu. Sau đó random.
+    const whoSpeaks = (turnCount === 0)
+      ? 'A'
+      : (Math.random() < 0.5 ? 'A' : 'B');
+
+    turnCount++;
+    document.getElementById('turnCount').textContent = turnCount;
+
+    const logA = document.getElementById('logA');
+    const logB = document.getElementById('logB');
+
+    try {
+      if (whoSpeaks === 'A') {
+        // ── Agent A speaks ──
+        setThinking('A', true);
+        setStatus(`Lượt ${turnCount}: Agent A (${modelA}) đang suy nghĩ…`, true);
+
+        // Nếu là lượt đầu, A tự mở đầu với 1 user-turn rỗng kick-start
+        let messagesForA = [...historyA];
+        if (turnCount === 1) {
+          messagesForA = [{ role: 'user', content: 'Hello. Who are you? What kind of AI are you?' }];
+        }
+
+        const replyA = await callGroq(apiKey, modelA, messagesForA);
+        setThinking('A', false);
+
+        addMsg(logA, replyA, 'msg-a', `Lượt ${turnCount} — Agent A nói:`);
+
+        // Cập nhật lịch sử
+        if (turnCount === 1) {
+          historyA.push({ role: 'user', content: 'Hello. Who are you? What kind of AI are you?' });
+        }
+        historyA.push({ role: 'assistant', content: replyA });
+
+        // B nhận lời của A làm user message
+        historyB.push({ role: 'user', content: replyA });
+
+        addMsg(logB, `[Nhận từ A]: ${replyA}`, 'msg-system');
+
+      } else {
+        // ── Agent B speaks ──
+        setThinking('B', true);
+        setStatus(`Lượt ${turnCount}: Agent B (${modelB}) đang suy nghĩ…`, true);
+
+        const replyB = await callGroq(apiKey, modelB, historyB);
+        setThinking('B', false);
+
+        addMsg(logB, replyB, 'msg-b', `Lượt ${turnCount} — Agent B nói:`);
+
+        historyB.push({ role: 'assistant', content: replyB });
+
+        // A nhận lời của B làm user message
+        historyA.push({ role: 'user', content: replyB });
+
+        addMsg(logA, `[Nhận từ B]: ${replyB}`, 'msg-system');
+      }
+
+      setStatus(`Lượt ${turnCount} xong. Tiếp theo sau ${delay/1000}s…`, false);
+
+    } catch (e) {
+      setThinking('A', false);
+      setThinking('B', false);
+      setStatus(`❌ Lỗi: ${e.message}`, false);
+      addMsg(logA, `[Lỗi]: ${e.message}`, 'msg-system');
+      addMsg(logB, `[Lỗi]: ${e.message}`, 'msg-system');
+      running = false;
+      document.getElementById('startBtn').style.display = '';
+      document.getElementById('stopBtn').style.display = 'none';
+      return;
+    }
+
+    if (running) {
+      timeoutId = setTimeout(tick, delay);
+    }
+  }
+
+  // ── Controls ───────────────────────────────────────────────────────
+  function startConversation() {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (!apiKey) { alert('Vui lòng nhập Groq API Key!'); return; }
+
+    running = true;
+    turnCount = 0;
+    historyA = [];
+    historyB = [];
+    document.getElementById('turnCount').textContent = 0;
+
+    const modelA = document.getElementById('modelA').value;
+    const modelB = document.getElementById('modelB').value;
+    document.getElementById('badgeA').textContent = modelA.split('-').slice(0,3).join('-');
+    document.getElementById('badgeB').textContent = modelB.split('-').slice(0,3).join('-');
+
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = '';
+
+    document.getElementById('logA').innerHTML = '';
+    document.getElementById('logB').innerHTML = '';
+
+    setStatus('Đang khởi động cuộc trò chuyện…', true);
+    tick();
+  }
+
+  function stopConversation() {
+    running = false;
+    if (timeoutId) clearTimeout(timeoutId);
+    setThinking('A', false);
+    setThinking('B', false);
+    document.getElementById('startBtn').style.display = '';
+    document.getElementById('stopBtn').style.display = 'none';
+    setStatus(`Đã dừng sau ${turnCount} lượt.`, false);
+  }
+
+  function clearAll() {
+    stopConversation();
+    turnCount = 0;
+    historyA = [];
+    historyB = [];
+    document.getElementById('turnCount').textContent = 0;
+    document.getElementById('logA').innerHTML = '';
+    document.getElementById('logB').innerHTML = '';
+    document.getElementById('badgeA').textContent = '—';
+    document.getElementById('badgeB').textContent = '—';
+    setStatus('Đã xoá. Sẵn sàng bắt đầu lại.', false);
+  }
+</script>
+</body>
+</html>
