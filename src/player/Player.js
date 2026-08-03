@@ -274,40 +274,6 @@ export class Player{
       G.ui.notify('📰 Dán giáp giấy lên thành tàu (chặn 1 đòn)','good');
     }
     else if(u==='saddle'){
-      const near = G.entities.passives.find(p=>!p.rider && p.pos.distanceTo(this.pos) < 4);
-      if(!near){ G.ui.notify('Không có Ngựa/Kỳ Lân nào gần đây','bad'); return  // ---------- items ----------
-  useUtility(){
-    const u = this.utility;
-    if(!u || !this.has(u)){ Audio.deny(); return; }
-    const dir = new THREE.Vector3(0,0,-1).applyEuler(G.camera.rotation);
-    const origin = this.eyePos().addScaledVector(dir, .8);
-    const ground = V(this.pos.x + dir.x*2, this.pos.y, this.pos.z + dir.z*2);
-
-    if(u==='dynamite' || u==='holy_water'){
-      this.remove(u,1);
-      G.entities.throwItem(u, origin, dir);
-      G.ui.notify(u==='dynamite' ? '🧨 Ném dynamite — nổ sau 3 giây!' : '💧 Ném nước thánh!');
-    }
-    else if(u==='crucifix'){
-      this.remove(u,1);
-      G.world.addHolyZone(ground);
-      G.ui.notify('✝ Đặt Crucifix — vùng thiêng bán kính 8m','good');
-    }
-    else if(u==='banjo'){
-      this.remove(u,1); Audio.banjo();
-      G.world.lures.push({pos:ground.clone(), t:20});
-      const m = new THREE.Mesh(new THREE.BoxGeometry(.3,.7,.12),
-        new THREE.MeshLambertMaterial({color:0xb0803a}));
-      m.position.copy(ground); m.position.y=.4; G.scene.add(m);
-      setTimeout(()=>G.scene.remove(m), 20000);
-      G.ui.notify('🪕 Banjo vang lên — zombie bị hút về đó!','good');
-    }
-    else if(u==='newspaper'){
-      if(Math.abs(this.pos.x - G.train.x) > 26){ Audio.deny(); G.ui.notify('Phải đứng gần tàu!','bad'); return; }
-      this.remove(u,1); G.train.addArmor();
-      G.ui.notify('📰 Dán giáp giấy lên tàu (chặn 1 đòn)','good');
-    }
-    else if(u==='saddle'){
       const near = G.entities.passives.find(p=>!p.rider && p.pos.distanceTo(this.pos) < 5);
       if(!near){ Audio.deny(); G.ui.notify('Không có Ngựa/Kỳ Lân nào gần đây','bad'); return; }
       this.remove(u,1); this.mountUp(near);
