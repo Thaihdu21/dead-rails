@@ -2,117 +2,126 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DEAD RAILS — 1899</title>
-<link rel="stylesheet" href="./style.css">
-<script type="importmap">
-{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-</script>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="game"></div>
+<canvas id="game"></canvas>
 
-<!-- ================= HUD ================= -->
+<!-- ===== HUD ===== -->
 <div id="hud" class="hidden">
   <div id="crosshair">+</div>
+  <div id="hitmarker">✕</div>
 
-  <div id="topbar">
-    <div id="dist-wrap">
-      <div id="dist">0 m / 80,000 m</div>
-      <div id="dist-track"><div id="dist-fill"></div></div>
+  <div id="topleft">
+    <div class="bar-wrap"><span class="bar-ico">❤️</span>
+      <div class="bar"><div id="hpfill" class="fill hp"></div><span id="hptext">100/100</span></div>
     </div>
-    <div id="clock">☀ 08:00 — NGÀY</div>
+    <div class="bar-wrap"><span class="bar-ico">🔥</span>
+      <div class="bar"><div id="fuelfill" class="fill fuel"></div><span id="fueltext">0/100</span></div>
+    </div>
+    <div class="bar-wrap"><span class="bar-ico">🚂</span>
+      <div class="bar"><div id="thpfill" class="fill thp"></div><span id="thptext">1000/1000</span></div>
+    </div>
+    <div id="armorline">📰 Newspaper armor: <b>0</b></div>
   </div>
 
-  <div id="leftbar">
-    <div class="stat">
-      <span class="lbl">❤️ HP</span>
-      <div class="bar"><div id="hp-fill" class="fill hp"></div></div>
-      <span id="hp-txt">100</span>
-    </div>
-    <div class="stat">
-      <span class="lbl">🚂 TRAIN</span>
-      <div class="bar"><div id="thp-fill" class="fill thp"></div></div>
-      <span id="thp-txt">1000</span>
-    </div>
-    <div class="stat">
-      <span class="lbl">🔥 FUEL</span>
-      <div class="bar"><div id="fuel-fill" class="fill fuel"></div></div>
-      <span id="fuel-txt">100%</span>
-    </div>
-    <div id="train-info">Throttle: NORMAL · 📰 x0</div>
+  <div id="topcenter">
+    <div id="distance">0 m / 80,000 m</div>
+    <div id="progress"><div id="progfill"></div></div>
+    <div id="speed">0 km/h</div>
   </div>
 
-  <div id="rightbar">
+  <div id="topright">
     <div id="money">$50</div>
-    <div id="weapon">Knife</div>
+    <div id="phase">🌞 NGÀY — 06:00</div>
+  </div>
+
+  <div id="botright">
+    <div id="weapon">Nắm đấm</div>
     <div id="ammo">— / —</div>
-    <div id="utility">Utility: —</div>
   </div>
 
-  <div id="inv-panel">
-    <div class="inv-title">🎒 INVENTORY</div>
-    <div id="inv-list"></div>
+  <div id="botleft">
+    <div class="ttl">🎒 INVENTORY <span class="dim">(TAB mở rộng)</span></div>
+    <div id="invlist"></div>
   </div>
 
+  <div id="hotbar"></div>
   <div id="prompt" class="hidden"></div>
-  <div id="notifications"></div>
-  <div id="dmg-layer"></div>
-  <div id="hitmark" class="hidden">✕</div>
+  <div id="notifs"></div>
+  <div id="dmgflash"></div>
+  <div id="moonflash"></div>
 </div>
 
-<!-- ================= SHOP ================= -->
-<div id="shop" class="overlay hidden">
+<!-- ===== INVENTORY PANEL ===== -->
+<div id="invpanel" class="overlay hidden">
   <div class="panel">
-    <h2 id="shop-title">GENERAL STORE</h2>
-    <div id="shop-money">$0</div>
-    <div id="shop-cols"></div>
-    <button class="btn" id="shop-close">ĐÓNG (ESC)</button>
+    <h2>🎒 TÚI ĐỒ</h2>
+    <div id="invgrid" class="grid"></div>
+    <p class="dim">Click vào vật phẩm để dùng / trang bị. TAB để đóng.</p>
   </div>
 </div>
 
-<!-- ================= SCREENS ================= -->
-<div id="start" class="overlay">
+<!-- ===== SHOP ===== -->
+<div id="shop" class="overlay hidden">
   <div class="panel wide">
+    <h2 id="shoptitle">GENERAL STORE</h2>
+    <div id="shopmoney">$0</div>
+    <div id="shopgrid" class="grid"></div>
+    <div class="row">
+      <button id="sellall" class="btn hidden">BÁN TOÀN BỘ LOOT</button>
+      <button id="shopclose" class="btn">ĐÓNG (ESC)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VAULT KEYPAD ===== -->
+<div id="vault" class="overlay hidden">
+  <div class="panel">
+    <h2>🔐 BANK VAULT</h2>
+    <p>Nhập mã 5 số lấy từ Zombie Banker:</p>
+    <div id="vaultcode" class="code">_ _ _ _ _</div>
+    <div id="keypad"></div>
+    <button id="vaultclose" class="btn">HUỶ (ESC)</button>
+  </div>
+</div>
+
+<!-- ===== SCREENS ===== -->
+<div id="start" class="overlay">
+  <div class="panel center">
     <h1>DEAD RAILS</h1>
     <h3>1899 — 80,000 MÉT ĐẾN MEXICO</h3>
-    <p class="story">Dịch bệnh đã nuốt chửng miền Tây. Con tàu hơi nước này là hy vọng cuối cùng.
-      Đốt lò, giữ vững nòng súng, và cầu nguyện trăng đừng đỏ.</p>
+    <p class="story">Dịch bệnh đã nuốt chửng miền Viễn Tây. Đoàn tàu hơi nước là cơ hội cuối cùng.
+       Đốt than, đốt gỗ, đốt cả xác kẻ thù — miễn là bánh xe còn quay.</p>
     <div class="keys">
-      <div><b>W A S D</b> Di chuyển · <b>Shift</b> Chạy · <b>Space</b> Nhảy</div>
-      <div><b>Chuột</b> Nhìn · <b>Click trái</b> Bắn / Đâm</div>
-      <div><b>E</b> Tương tác / Nhặt · <b>F</b> Nạp nhiên liệu · <b>G</b> Dùng vật phẩm</div>
-      <div><b>1–6</b> Đổi súng · <b>Q</b> Đổi vật phẩm · <b>R</b> Nạp đạn · <b>H</b> Hồi máu</div>
-      <div><b>ESC</b> Tạm dừng</div>
+      <div><b>W A S D</b> di chuyển · <b>Shift</b> chạy · <b>Space</b> nhảy</div>
+      <div><b>Chuột</b> nhìn · <b>Click trái</b> bắn/đánh · <b>R</b> nạp đạn</div>
+      <div><b>E</b> tương tác / lên–xuống tàu · <b>F</b> nạp nhiên liệu · <b>G</b> ném</div>
+      <div><b>1–8</b> chọn vật phẩm · <b>TAB</b> túi đồ · <b>ESC</b> tạm dừng</div>
     </div>
-    <button class="btn big" id="btn-start">BẮT ĐẦU HÀNH TRÌNH</button>
+    <button id="btnplay" class="btn big">BẮT ĐẦU HÀNH TRÌNH</button>
   </div>
 </div>
 
 <div id="pause" class="overlay hidden">
-  <div class="panel">
-    <h2>TẠM DỪNG</h2>
-    <button class="btn" id="btn-resume">TIẾP TỤC</button>
-    <button class="btn" id="btn-restart">CHƠI LẠI</button>
+  <div class="panel center">
+    <h1>TẠM DỪNG</h1>
+    <button id="btnresume" class="btn big">TIẾP TỤC</button>
+    <button id="btnrestart" class="btn">CHƠI LẠI</button>
   </div>
 </div>
 
 <div id="gameover" class="overlay hidden">
-  <div class="panel">
-    <h2 class="red">BẠN ĐÃ CHẾT</h2>
-    <p id="go-text"></p>
-    <button class="btn" id="btn-retry">THỬ LẠI</button>
+  <div class="panel center">
+    <h1 id="gotitle">BẠN ĐÃ CHẾT</h1>
+    <p id="gostats"></p>
+    <button id="btnagain" class="btn big">THỬ LẠI</button>
   </div>
 </div>
 
-<div id="victory" class="overlay hidden">
-  <div class="panel">
-    <h2 class="gold">ĐẾN MEXICO!</h2>
-    <p id="win-text"></p>
-    <button class="btn" id="btn-again">CHƠI LẠI</button>
-  </div>
-</div>
-
-<script type="module" src="./src/main.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="src/main.js"></script>
 </body>
 </html>
