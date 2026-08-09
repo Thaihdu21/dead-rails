@@ -349,7 +349,7 @@ class GenLayer {
     this.chunkSeed = BigInt.asIntN(64, this.chunkSeed * MULT + ADD); this.chunkSeed = BigInt.asIntN(64, this.chunkSeed + BigInt(z));
   }
   nextInt(bound) {
-    let i = Number(BigInt.asIntN(32, this.chunkSeed >> 24n) % bound);
+    let i = Number(BigInt.asIntN(32, this.chunkSeed >> 24n) % BigInt(bound));
     if (i < 0) i += bound;
     this.chunkSeed = BigInt.asIntN(64, this.chunkSeed * MULT + ADD);
     this.chunkSeed = BigInt.asIntN(64, this.chunkSeed + this.worldGenSeed);
