@@ -2,652 +2,1347 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Mô Phỏng Cuộc Đời AI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minecraft 1.12 – Seed Map</title>
 <style>
-  body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #eee; margin:0; padding:20px; }
-  .container { max-width: 960px; margin: auto; }
-  h1 { text-align:center; color:#6cf; }
-  .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:20px; }
-  .card { background:#1a1d27; border-radius:12px; padding:16px; box-shadow:0 0 8px rgba(0,0,0,0.4); }
-  .bar-bg { background:#333; border-radius:8px; overflow:hidden; height:20px; margin-top:6px; }
-  .bar-fill { height:100%; transition: width 0.5s; }
-  .health .bar-fill { background: linear-gradient(90deg,#e33,#5f5); }
-  .stress .bar-fill { background: linear-gradient(90deg,#5af,#a5f); }
-  #log { background:#111; border-radius:12px; padding:12px; height:280px; overflow-y:auto; font-size:13px; line-height:1.5; }
-  #log .entry { margin-bottom:10px; border-bottom:1px solid #222; padding-bottom:8px; }
-  #log .narrative { color:#dde; }
-  #log .decision { color:#8cf; font-family:monospace; font-size:12px; margin-top:4px; white-space:pre-wrap; }
-  .stat-label { font-size:13px; opacity:0.8; }
-  .stat-value { font-size:22px; font-weight:bold; }
-  button { background:#3a5; border:none; color:white; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:15px; margin:4px; }
-  button:hover { background:#4c6; }
-  button:disabled { background:#555; cursor:not-allowed; }
-  .controls { text-align:center; margin:16px 0; }
-  canvas { background:#1a1d27; border-radius:12px; }
-  .pie-wrap { display:flex; align-items:center; gap:16px; }
-  .legend div { display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:13px; }
-  .swatch { width:12px; height:12px; border-radius:3px; display:inline-block; }
-  .dead { color:#f55; font-weight:bold; }
-  .invest-table { width:100%; font-size:13px; border-collapse: collapse; margin-top:8px; }
-  .invest-table td { padding:4px 0; }
-  .invest-table td:last-child { text-align:right; font-weight:bold; }
-  .inflation-tag { display:inline-block; background:#432; color:#fc8; padding:2px 8px; border-radius:6px; font-size:12px; margin-left:8px; }
-  .gamble-tag { display:inline-block; background:#421; color:#f88; padding:2px 8px; border-radius:6px; font-size:12px; margin-left:8px; }
-  .cash-negative { color:#f55 !important; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0f12;--panel:#141820;--border:#1f2733;
+  --accent:#4ade80;--accent2:#22d3ee;--red:#f87171;
+  --yellow:#fbbf24;--purple:#a78bfa;--orange:#fb923c;
+  --text:#e2e8f0;--muted:#64748b;
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── HEADER ── */
+header{display:flex;align-items:center;gap:12px;padding:0 20px;height:52px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;z-index:10}
+.logo{font-family:var(--mono);font-weight:700;font-size:17px;color:var(--accent);display:flex;align-items:center;gap:8px}
+.logo-box{width:26px;height:26px;background:linear-gradient(135deg,#4ade80,#22d3ee);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.tabs{display:flex;gap:2px;margin-left:12px}
+.tab{padding:5px 14px;border-radius:6px;border:none;background:transparent;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s;font-family:var(--sans)}
+.tab:hover{background:var(--border);color:var(--text)}
+.tab.active{background:#1a2e1f;color:var(--accent);border:1px solid #2a5c3e}
+.header-r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.badge{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:4px;background:#1e2d3d;color:var(--accent2);border:1px solid #1f3d5c}
+
+/* ── SEED BAR ── */
+.seedbar{display:flex;align-items:center;gap:10px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.seedbar label{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.seed-wrap{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:7px;overflow:hidden;flex:1;max-width:320px;transition:.2s}
+.seed-wrap:focus-within{border-color:var(--accent)}
+#seedInput{background:transparent;border:none;outline:none;color:var(--accent);font-family:var(--mono);font-size:13px;padding:7px 12px;width:100%}
+#seedInput::placeholder{color:var(--muted)}
+.btn{padding:7px 16px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-family:var(--sans);font-weight:500;transition:.15s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#0a1a10}
+.btn-p:hover{background:#6ee79a}
+.btn-g{background:var(--border);color:var(--text)}
+.btn-g:hover{background:#2a3447}
+select.sel{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 8px;border-radius:7px;cursor:pointer;outline:none}
+
+/* ── MAIN ── */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:230px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:2px}
+.sg{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;padding:8px 8px 4px}
+.sitem{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:6px;cursor:pointer;font-size:12px;border:1px solid transparent;transition:.12s;user-select:none}
+.sitem:hover{background:var(--border)}
+.sitem.on{background:#1a2e1f;border-color:#2a5c3e;color:var(--accent)}
+.sdot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.scnt{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--border);padding:1px 5px;border-radius:3px}
+.sitem.on .scnt{color:var(--accent);background:#1e3a2e}
+
+/* ── MAP ── */
+.map-wrap{flex:1;position:relative;overflow:hidden;background:var(--bg)}
+canvas#mc{position:absolute;top:0;left:0;cursor:grab;image-rendering:pixelated}
+canvas#mc:active{cursor:grabbing}
+.zoom-btns{position:absolute;right:14px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px}
+.zbtn{width:34px;height:34px;background:var(--panel);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.12s}
+.zbtn:hover{border-color:var(--accent);color:var(--accent);background:#141820}
+.compass{position:absolute;top:14px;right:14px;width:44px;height:44px;background:var(--panel);border:1px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;user-select:none}
+.coordbar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(20,24,32,.92);border:1px solid var(--border);border-radius:7px;padding:5px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);pointer-events:none;backdrop-filter:blur(6px)}
+.coordbar span{color:var(--text)}
+.scalebar{position:absolute;bottom:14px;left:14px;pointer-events:none}
+.scaleline{height:5px;border:1.5px solid var(--muted);border-top:none;width:72px}
+.scalelbl{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.tooltip{position:absolute;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:9px 13px;font-size:12px;pointer-events:none;z-index:20;display:none;min-width:130px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.tooltip.vis{display:block}
+.tt-name{font-weight:600;margin-bottom:3px}
+.tt-coord{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.loading{position:absolute;inset:0;background:rgba(13,15,18,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:30;backdrop-filter:blur(4px);transition:opacity .3s}
+.loading.hide{opacity:0;pointer-events:none}
+.spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ldtxt{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+/* ── INFO PANEL ── */
+.info{width:260px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px}
+.ig{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:7px}
+.seed-disp{font-family:var(--mono);font-size:16px;color:var(--accent);word-break:break-all;line-height:1.4}
+.seed-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.irow{display:flex;align-items:center;gap:9px;padding:7px 9px;background:var(--bg);border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:12px;transition:.12s}
+.irow:hover{border-color:var(--accent2)}
+.irow-coord{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid;font-family:var(--mono)}
+.stat-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:2px 0}
+.stat-row span{color:var(--text);font-family:var(--mono)}
+
+/* ── LEGEND ── */
+.legend{position:absolute;top:14px;left:14px;background:rgba(20,24,32,.9);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:11px;backdrop-filter:blur(6px);display:none;max-width:180px}
+.legend.vis{display:block}
+.leg-row{display:flex;align-items:center;gap:7px;padding:2px 0}
+.leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:860px){.info{display:none}}
+@media(max-width:620px){.sidebar{width:180px}}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>🧬 Mô Phỏng Cuộc Đời AI</h1>
-  <div class="controls">
-    <button id="startBtn">▶ Bắt đầu</button>
-    <button id="pauseBtn" disabled>⏸ Tạm dừng</button>
-    <button id="resetBtn">🔄 Reset</button>
-    <span id="genInfo" style="margin-left:12px; opacity:0.7;"></span>
+
+<!-- HEADER -->
+<header>
+  <div class="logo"><div class="logo-box">⛏️</div>MC SeedMap</div>
+  <div class="tabs">
+    <button class="tab active" onclick="setMode('biome',this)">🌿 Biome</button>
+    <button class="tab" onclick="setMode('ore',this)">💎 Ore</button>
+    <button class="tab" onclick="setMode('cave',this)">🕳️ Cave</button>
+    <button class="tab" onclick="setMode('structure',this)">🏘️ Structure</button>
+  </div>
+  <div class="header-r">
+    <span class="badge">Java 1.12.2</span>
+    <button class="btn btn-g" style="font-size:11px" onclick="toggleLegend()">🗺️ Legend</button>
+  </div>
+</header>
+
+<!-- SEED BAR -->
+<div class="seedbar">
+  <label>SEED</label>
+  <div class="seed-wrap">
+    <input id="seedInput" type="text" placeholder="Nhập seed hoặc tên thế giới…" value="-4172144997902289642">
+  </div>
+  <button class="btn btn-p" onclick="generate()">🔍 Tìm kiếm</button>
+  <button class="btn btn-g" onclick="randomSeed()">🎲 Ngẫu nhiên</button>
+  <select class="sel" id="oreSelect" style="display:none" onchange="draw()">
+    <option value="diamond">💎 Diamond (Y:0-16)</option>
+    <option value="gold">🟡 Gold (Y:0-32)</option>
+    <option value="iron">🟤 Iron (Y:0-64)</option>
+    <option value="coal">⬛ Coal (Y:0-128)</option>
+    <option value="redstone">🔴 Redstone (Y:0-16)</option>
+    <option value="lapis">🔵 Lapis (Y:0-32)</option>
+    <option value="emerald">💚 Emerald (Y:0-32)</option>
+  </select>
+  <select class="sel" id="ySelect" style="display:none" onchange="draw()">
+    <option value="11">Y=11 (Diamond optimal)</option>
+    <option value="5">Y=5</option>
+    <option value="16">Y=16</option>
+    <option value="32">Y=32</option>
+    <option value="64">Y=64</option>
+  </select>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <!-- filled by JS -->
   </div>
 
-  <div class="grid">
-    <div class="card">
-      <div class="stat-label">Tuổi</div>
-      <div class="stat-value" id="ageVal">1</div>
-      <div class="stat-label" style="margin-top:10px;">Trạng thái hiện tại</div>
-      <div class="stat-value" id="stateVal" style="font-size:16px;">Đang khởi tạo...</div>
+  <!-- MAP -->
+  <div class="map-wrap" id="mapWrap">
+    <canvas id="mc"></canvas>
+
+    <!-- Legend -->
+    <div class="legend" id="legend"></div>
+
+    <!-- Zoom -->
+    <div class="zoom-btns">
+      <button class="zbtn" onclick="doZoom(1.3)">+</button>
+      <button class="zbtn" onclick="doZoom(0.77)">−</button>
+      <button class="zbtn" onclick="resetView()" title="Về spawn">⌂</button>
     </div>
 
-    <div class="card">
-      <div class="stat-label">💰 Tiền mặt: <span id="cashVal">0</span> VNĐ</div>
-      <div class="stat-label" style="margin-top:8px;">🏦 Tiết kiệm: <span id="savingsVal">0</span> VNĐ</div>
-      <div class="stat-label">📈 Chứng khoán: <span id="stockVal">0</span> VNĐ</div>
-      <div class="stat-label">🏧 Nợ ngân hàng (có lãi): <span id="debtVal">0</span> VNĐ (lãi <span id="interestVal">0</span>%)</div>
-      <div class="stat-label">👶 Nợ nuôi dưỡng: <span id="rearingDebtVal">0</span> VNĐ <span id="rearingInterestTag" style="font-size:11px;opacity:0.7;"></span></div>
-      <div class="stat-label">📊 Lạm phát: <span class="inflation-tag" id="inflationVal">3%</span></div>
-      <div class="stat-label">🎰 Cờ bạc: <span class="gamble-tag" id="gambleVal">Chưa chơi</span></div>
+    <div class="compass">🧭</div>
+
+    <div class="scalebar">
+      <div class="scalelbl" id="scaleLabel">128 blocks</div>
+      <div class="scaleline"></div>
     </div>
 
-    <div class="card health">
-      <div class="stat-label">❤️ Sức khỏe</div>
-      <div class="bar-bg"><div class="bar-fill" id="healthBar" style="width:100%;"></div></div>
-      <div class="stat-label" style="margin-top:4px;" id="healthPct">100%</div>
+    <div class="coordbar">X:<span id="cx">0</span>&nbsp; Z:<span id="cz">0</span>&nbsp; <span id="biomeAt" style="color:var(--accent2)"></span></div>
+
+    <div class="tooltip" id="tooltip">
+      <div class="tt-name" id="ttN"></div>
+      <div class="tt-coord" id="ttC"></div>
     </div>
 
-    <div class="card stress">
-      <div class="stat-label">😵 Căng thẳng / Áp lực</div>
-      <div class="bar-bg"><div class="bar-fill" id="stressBar" style="width:0%;"></div></div>
-      <div class="stat-label" style="margin-top:4px;" id="stressPct">0%</div>
-    </div>
-  </div>
-
-  <div class="grid" style="margin-top:16px;">
-    <div class="card">
-      <div class="stat-label">🕐 Phân bổ thời gian trong năm</div>
-      <div class="pie-wrap">
-        <canvas id="pieChart" width="160" height="160"></canvas>
-        <div class="legend" id="pieLegend"></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="stat-label">📈 Biến động thị trường chứng khoán theo năm (%)</div>
-      <canvas id="lineChart" width="380" height="160"></canvas>
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div class="ldtxt" id="ldtxt">Đang tính toán…</div>
     </div>
   </div>
 
-  <div class="card" style="margin-top:16px;">
-    <div class="stat-label">💼 Tổng đầu tư / tài chính lũy kế</div>
-    <table class="invest-table">
-      <tr><td>Tổng đã gửi tiết kiệm ngân hàng</td><td id="totalSavedVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã rút tiết kiệm</td><td id="totalSavingsWithdrawnVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã đầu tư vào chứng khoán</td><td id="totalInvestedVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã rút khỏi chứng khoán</td><td id="totalWithdrawnVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã vay ngân hàng</td><td id="totalBorrowedVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã trả nợ vay</td><td id="totalRepaidVal">0 VNĐ</td></tr>
-      <tr><td>Tổng đã trả nợ nuôi dưỡng (chủ động + cưỡng chế)</td><td id="totalRearingRepaidVal">0 VNĐ</td></tr>
-      <tr><td>Tổng thuế thu nhập đã đóng</td><td id="totalTaxVal">0 VNĐ</td></tr>
-      <tr><td>Tổng chi phí sinh hoạt đã trả</td><td id="totalLivingVal">0 VNĐ</td></tr>
-      <tr><td>Tổng tiền mua xổ số</td><td id="totalLotteryVal">0 VNĐ</td></tr>
-      <tr><td>Tổng trúng xổ số</td><td id="totalLotteryWinVal">0 VNĐ</td></tr>
-      <tr><td>Tổng tiền đã cược casino</td><td id="totalGambleVal">0 VNĐ</td></tr>
-      <tr><td>Tổng thắng/thua casino</td><td id="totalGambleWinVal">0 VNĐ</td></tr>
-    </table>
+  <!-- INFO -->
+  <div class="info" id="infoPanel">
+    <div>
+      <div class="ig">Seed hiện tại</div>
+      <div class="seed-disp" id="dSeed">-4172144997902289642</div>
+      <div class="seed-sub">Java 1.12.2 · Overworld</div>
+    </div>
+    <div>
+      <div class="ig">Gần spawn nhất</div>
+      <div id="nearList" style="display:flex;flex-direction:column;gap:5px"></div>
+    </div>
+    <div>
+      <div class="ig">Biome tại con trỏ</div>
+      <div id="hoverBiome" style="font-size:13px;color:var(--accent2);font-family:var(--mono)">—</div>
+    </div>
+    <div>
+      <div class="ig">Thống kê</div>
+      <div class="stat-row">Chế độ: <span id="statMode">Biome</span></div>
+      <div class="stat-row">Tổng structures: <span id="statTotal">0</span></div>
+      <div class="stat-row">Vùng hiển thị: <span id="statRange">±2048 blocks</span></div>
+      <div class="stat-row">Spawn: <span>X:0 Z:0</span></div>
+    </div>
   </div>
 
-  <div class="card" style="margin-top:16px;">
-    <div class="stat-label">📜 Nhật ký cuộc đời & quyết định của AI</div>
-    <div id="log"></div>
-  </div>
 </div>
 
 <script>
-// ====== CẤU HÌNH ======
-const GROQ_API_KEY = "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";
-const GROQ_MODEL = "llama-3.1-8b-instant";
-const TICK_MS = 15000;
-const ADULT_AGE = 18; // mốc tuổi được phép thực hiện MỌI hành động tài chính
+// ═══════════════════════════════════════════════════════
+//  JAVA RANDOM – exact port of java.util.Random (LCG)
+//  Source: OpenJDK, confirmed against MC 1.12 bytecode
+// ═══════════════════════════════════════════════════════
+class JavaRandom {
+  constructor(seed) {
+    const s = typeof seed === 'bigint' ? seed : BigInt(seed);
+    this._seed = (s ^ 0x5DEECE66Dn) & ((1n << 48n) - 1n);
+  }
+  _next(bits) {
+    this._seed = (this._seed * 0x5DEECE66Dn + 0xBn) & ((1n << 48n) - 1n);
+    const v = this._seed >> BigInt(48 - bits);
+    return Number(BigInt.asIntN(32, v));
+  }
+  nextInt(bound) {
+    if (bound === undefined) return this._next(32);
+    if ((bound & (bound - 1)) === 0) return Number((BigInt(this._next(31)) * BigInt(bound)) >> 31n);
+    let bits, val;
+    do { bits = this._next(31); val = bits % bound; } while (bits - val + (bound - 1) < 0);
+    return val;
+  }
+  nextLong() {
+    return BigInt.asIntN(64, (BigInt(this._next(32)) << 32n) | BigInt(this._next(32)) & 0xFFFFFFFFn);
+  }
+  nextFloat() { return this._next(24) / (1 << 24); }
+  nextDouble() { return Number((BigInt(this._next(26)) << 27n) | BigInt(this._next(27))) / (1 << 53); }
+}
 
-// ====== BẢNG LƯƠNG ======
-const SALARY_TABLE = {
-  "lao_dong_pho_thong": { min: 72000000, max: 96000000, label: "Lao động phổ thông (3 cọc 3 đồng)" },
-  "van_phong":          { min: 120000000, max: 216000000, label: "Nhân viên văn phòng" },
-  "chuyen_mon":         { min: 240000000, max: 480000000, label: "Chuyên môn/kỹ sư có kinh nghiệm" },
-  "quan_ly":            { min: 480000000, max: 960000000, label: "Quản lý/chuyên gia cao cấp" }
+// ═══════════════════════════════════════════════════════
+//  BIOME IDs (Minecraft 1.12)
+// ═══════════════════════════════════════════════════════
+const B = {
+  OCEAN:0, PLAINS:1, DESERT:2, EXTREME_HILLS:3, FOREST:4, TAIGA:5,
+  SWAMPLAND:6, RIVER:7, FROZEN_OCEAN:10, FROZEN_RIVER:11, ICE_PLAINS:12,
+  ICE_MOUNTAINS:13, MUSHROOM_ISLAND:14, MUSHROOM_ISLAND_SHORE:15,
+  BEACH:16, DESERT_HILLS:17, FOREST_HILLS:18, TAIGA_HILLS:19,
+  EXTREME_HILLS_EDGE:20, JUNGLE:21, JUNGLE_HILLS:22, JUNGLE_EDGE:23,
+  DEEP_OCEAN:24, STONE_BEACH:25, COLD_BEACH:26, BIRCH_FOREST:27,
+  BIRCH_FOREST_HILLS:28, ROOFED_FOREST:29, COLD_TAIGA:30, COLD_TAIGA_HILLS:31,
+  REDWOOD_TAIGA:32, REDWOOD_TAIGA_HILLS:33, EXTREME_HILLS_WITH_TREES:34,
+  SAVANNA:35, SAVANNA_PLATEAU:36, MESA:37, MESA_ROCK:38, MESA_CLEAR_ROCK:39,
+  // mutations (+128)
+  MUTATED_PLAINS:129, MUTATED_DESERT:130, MUTATED_EXTREME_HILLS:131,
+  MUTATED_FOREST:132, MUTATED_TAIGA:133, MUTATED_SWAMPLAND:134,
+  MUTATED_ICE_FLATS:140, MUTATED_JUNGLE:149, MUTATED_JUNGLE_EDGE:151,
+  MUTATED_BIRCH_FOREST:155, MUTATED_BIRCH_FOREST_HILLS:156,
+  MUTATED_ROOFED_FOREST:157, MUTATED_TAIGA_COLD:158, MUTATED_REDWOOD_TAIGA:160,
+  MUTATED_REDWOOD_TAIGA_HILLS:161, MUTATED_EXTREME_HILLS_WITH_TREES:162,
+  MUTATED_SAVANNA:163, MUTATED_SAVANNA_ROCK:164, MUTATED_MESA:165,
+  MUTATED_MESA_ROCK:166, MUTATED_MESA_CLEAR_ROCK:167,
 };
 
-const WEDDING_COST_MIN = 20000000, WEDDING_COST_MAX = 40000000;
-const WEDDING_GIFT_MIN = 10000000, WEDDING_GIFT_MAX = 30000000;
-
-// ====== THUẾ ======
-const TAX_THRESHOLD = 1000000000;
-const TAX_RATE_HIGH = 0.30;
-const TAX_RATE_NORMAL = 0.10;
-
-function calculateTax(salary, debt, rearingDebt) {
-  if (salary >= TAX_THRESHOLD) return salary * TAX_RATE_HIGH;
-  if (debt > 0 || rearingDebt > 0) return 0;
-  return salary * TAX_RATE_NORMAL;
-}
-
-// ====== CHI PHÍ SINH HOẠT & NỢ NUÔI DƯỠNG ======
-const BASE_LIVING_COST = 40000000;
-const CHILD_LIVING_COST = 25000000;
-const CHILD_REARING_COST = 15000000;
-const REARING_DEBT_INTEREST_START_AGE = 30;
-const REARING_DEBT_INTEREST_RATE = 8;
-const REARING_DEBT_FORCE_COLLECT_AGE = 40;
-
-function calculateLivingCost(age, children, inflation) {
-  if (age < ADULT_AGE) return 0;
-  const inflationMultiplier = 1 + (inflation / 100);
-  const base = BASE_LIVING_COST * inflationMultiplier;
-  const childCost = children * CHILD_LIVING_COST * inflationMultiplier;
-  return Math.round(base + childCost);
-}
-
-function calculateRearingCost(age, inflation) {
-  if (age >= ADULT_AGE) return 0;
-  return Math.round(CHILD_REARING_COST * (1 + inflation/100));
-}
-
-// ====== HỆ THỐNG TỰ TÍNH SỐ TIỀN THEO % (AI KHÔNG CÒN QUYẾT ĐỊNH AMOUNT) ======
-const MONEY_RULES = {
-  "gửi_tiết_kiệm":       (s) => Math.round(s.cash * 0.30),
-  "rút_tiết_kiệm":       (s) => Math.round(s.savings * 0.50),
-  "đầu_tư_chứng_khoán":  (s) => Math.round(s.cash * 0.25),
-  "rút_chứng_khoán":     (s) => Math.round(s.stock * 0.50),
-  "vay_ngân_hàng":       (s) => Math.round(Math.max(s.salary, 50000000) * 2),
-  "trả_nợ":              (s) => Math.min(Math.round(s.cash * 0.50), s.debt),
-  "trả_nợ_nuôi_dưỡng":   (s) => Math.min(Math.round(s.cash * 0.40), s.rearingDebt),
-  "mua_xổ_số":           (s) => Math.round(s.cash * 0.02),
-  "chơi_casino":         (s) => Math.round(s.cash * 0.10),
-  "sinh_con":            (s) => Math.round(s.cash * 0.15)
+// Biome colors – từ Minecraft biome grass/water tones
+const BIOME_COLOR = {
+  [B.OCEAN]:'#1a4f6e',[B.DEEP_OCEAN]:'#0d3349',[B.FROZEN_OCEAN]:'#9ab8d4',
+  [B.FROZEN_RIVER]:'#a0c8e0',[B.RIVER]:'#3a7fa0',
+  [B.PLAINS]:'#89c55a',[B.MUTATED_PLAINS]:'#b5e080',
+  [B.DESERT]:'#d4b96a',[B.DESERT_HILLS]:'#c4a85a',[B.MUTATED_DESERT]:'#e4c97a',
+  [B.FOREST]:'#2d7a2d',[B.FOREST_HILLS]:'#1e5e1e',[B.MUTATED_FOREST]:'#4aaa4a',
+  [B.BIRCH_FOREST]:'#5aa05a',[B.BIRCH_FOREST_HILLS]:'#3a803a',[B.MUTATED_BIRCH_FOREST]:'#7aca7a',
+  [B.ROOFED_FOREST]:'#103c10',[B.MUTATED_ROOFED_FOREST]:'#206020',
+  [B.TAIGA]:'#3a8060',[B.TAIGA_HILLS]:'#2a6048',[B.MUTATED_TAIGA]:'#5aaa88',
+  [B.REDWOOD_TAIGA]:'#2a6040',[B.REDWOOD_TAIGA_HILLS]:'#1a4028',[B.MUTATED_REDWOOD_TAIGA]:'#4a8060',
+  [B.COLD_TAIGA]:'#648c7c',[B.COLD_TAIGA_HILLS]:'#4a6c5c',[B.MUTATED_TAIGA_COLD]:'#84bcaa',
+  [B.EXTREME_HILLS]:'#7a7a7a',[B.EXTREME_HILLS_EDGE]:'#8a8a8a',[B.EXTREME_HILLS_WITH_TREES]:'#6a8a5a',
+  [B.MUTATED_EXTREME_HILLS]:'#9aaa9a',[B.MUTATED_EXTREME_HILLS_WITH_TREES]:'#8aaa8a',
+  [B.ICE_PLAINS]:'#c0d8f0',[B.ICE_MOUNTAINS]:'#a0b8d0',[B.MUTATED_ICE_FLATS]:'#e0f0ff',
+  [B.SWAMPLAND]:'#4a6030',[B.MUTATED_SWAMPLAND]:'#6a8040',
+  [B.JUNGLE]:'#1e8c1e',[B.JUNGLE_HILLS]:'#0e6c0e',[B.JUNGLE_EDGE]:'#3aac3a',
+  [B.MUTATED_JUNGLE]:'#0e7c0e',[B.MUTATED_JUNGLE_EDGE]:'#2a9c2a',
+  [B.SAVANNA]:'#b8b840',[B.SAVANNA_PLATEAU]:'#a0a030',[B.MUTATED_SAVANNA]:'#d8d860',[B.MUTATED_SAVANNA_ROCK]:'#c8c850',
+  [B.MESA]:'#c87040',[B.MESA_ROCK]:'#d88050',[B.MESA_CLEAR_ROCK]:'#e89060',
+  [B.MUTATED_MESA]:'#d88050',[B.MUTATED_MESA_ROCK]:'#e89060',[B.MUTATED_MESA_CLEAR_ROCK]:'#f8a070',
+  [B.MUSHROOM_ISLAND]:'#c882d4',[B.MUSHROOM_ISLAND_SHORE]:'#b070c0',
+  [B.BEACH]:'#e0d090',[B.COLD_BEACH]:'#d0e0f0',[B.STONE_BEACH]:'#9a9a9a',
+};
+const BIOME_NAME = {
+  [B.OCEAN]:'Ocean',[B.DEEP_OCEAN]:'Deep Ocean',[B.FROZEN_OCEAN]:'Frozen Ocean',
+  [B.FROZEN_RIVER]:'Frozen River',[B.RIVER]:'River',
+  [B.PLAINS]:'Plains',[B.MUTATED_PLAINS]:'Sunflower Plains',
+  [B.DESERT]:'Desert',[B.DESERT_HILLS]:'Desert Hills',[B.MUTATED_DESERT]:'Desert M',
+  [B.FOREST]:'Forest',[B.FOREST_HILLS]:'Forest Hills',[B.MUTATED_FOREST]:'Flower Forest',
+  [B.BIRCH_FOREST]:'Birch Forest',[B.BIRCH_FOREST_HILLS]:'Birch Forest Hills',[B.MUTATED_BIRCH_FOREST]:'Birch Forest M',
+  [B.ROOFED_FOREST]:'Roofed Forest',[B.MUTATED_ROOFED_FOREST]:'Roofed Forest M',
+  [B.TAIGA]:'Taiga',[B.TAIGA_HILLS]:'Taiga Hills',[B.MUTATED_TAIGA]:'Taiga M',
+  [B.REDWOOD_TAIGA]:'Mega Taiga',[B.REDWOOD_TAIGA_HILLS]:'Mega Taiga Hills',[B.MUTATED_REDWOOD_TAIGA]:'Mega Spruce Taiga',
+  [B.COLD_TAIGA]:'Cold Taiga',[B.COLD_TAIGA_HILLS]:'Cold Taiga Hills',[B.MUTATED_TAIGA_COLD]:'Cold Taiga M',
+  [B.EXTREME_HILLS]:'Extreme Hills',[B.EXTREME_HILLS_EDGE]:'Extreme Hills Edge',[B.EXTREME_HILLS_WITH_TREES]:'Extreme Hills+',
+  [B.MUTATED_EXTREME_HILLS]:'Extreme Hills M',[B.MUTATED_EXTREME_HILLS_WITH_TREES]:'Extreme Hills+ M',
+  [B.ICE_PLAINS]:'Ice Plains',[B.ICE_MOUNTAINS]:'Ice Mountains',[B.MUTATED_ICE_FLATS]:'Ice Spikes',
+  [B.SWAMPLAND]:'Swampland',[B.MUTATED_SWAMPLAND]:'Swampland M',
+  [B.JUNGLE]:'Jungle',[B.JUNGLE_HILLS]:'Jungle Hills',[B.JUNGLE_EDGE]:'Jungle Edge',
+  [B.MUTATED_JUNGLE]:'Jungle M',[B.MUTATED_JUNGLE_EDGE]:'Jungle Edge M',
+  [B.SAVANNA]:'Savanna',[B.SAVANNA_PLATEAU]:'Savanna Plateau',[B.MUTATED_SAVANNA]:'Savanna M',[B.MUTATED_SAVANNA_ROCK]:'Savanna Plateau M',
+  [B.MESA]:'Mesa',[B.MESA_ROCK]:'Mesa Plateau F',[B.MESA_CLEAR_ROCK]:'Mesa Plateau',
+  [B.MUTATED_MESA]:'Mesa (Bryce)',[B.MUTATED_MESA_ROCK]:'Mesa Plateau F M',[B.MUTATED_MESA_CLEAR_ROCK]:'Mesa Plateau M',
+  [B.MUSHROOM_ISLAND]:'Mushroom Island',[B.MUSHROOM_ISLAND_SHORE]:'Mushroom Island Shore',
+  [B.BEACH]:'Beach',[B.COLD_BEACH]:'Cold Beach',[B.STONE_BEACH]:'Stone Beach',
 };
 
-const FINANCIAL_ACTIONS = new Set([
-  "gửi_tiết_kiệm","rút_tiết_kiệm","đầu_tư_chứng_khoán","rút_chứng_khoán",
-  "vay_ngân_hàng","trả_nợ","trả_nợ_nuôi_dưỡng","mua_xổ_số","chơi_casino"
-]);
+// ═══════════════════════════════════════════════════════
+//  GEN LAYERS – exact port from MCP 940 source code
+// ═══════════════════════════════════════════════════════
+const MULT = 6364136223846793005n;
+const ADD  = 1442695040888963407n;
 
-function randRange(min, max) { return Math.round(min + Math.random() * (max - min)); }
-
-function playLottery(amount) {
-  const won = Math.random() < 0.03;
-  const prize = won ? amount * 50 : 0;
-  return { won, prize };
-}
-function playCasino(amount) {
-  const won = Math.random() < 0.45;
-  const result = won ? Math.round(amount * (1 + Math.random()*1.5)) : -amount;
-  return { won, result };
-}
-
-// ====== STATE ======
-function freshState(generation, cash, debt, rearingDebt) {
-  return {
-    generation, age: 1, cash: cash||0, savings: 0, stock: 0,
-    debt: debt||0, rearingDebt: rearingDebt||0, rearingDebtLocked: false,
-    interestRate: 5 + Math.random()*3, health: 100, stress: 0,
-    job: "Chưa có việc", salary: 0, currentTier: null, status: "Ngủ",
-    married: false, children: 0, eduLevel: "Chưa học",
-    marketTrend: 0, inflation: 3,
-    timeSplit: { sleep: 40, work: 30, overtime: 10, rest: 20, gamble: 0 },
-    marketHistory: [],
-    totals: { saved:0, savingsWithdrawn:0, invested:0, withdrawn:0, borrowed:0, repaid:0, rearingRepaid:0, taxPaid:0, livingCost:0, lottery:0, lotteryWin:0, gamble:0, gambleWin:0 }
-  };
-}
-
-let state = freshState(1, 0, 0, 0);
-let running = false;
-let timer = null;
-
-const el = id => document.getElementById(id);
-function fmt(n) { return Math.round(n).toLocaleString('vi-VN'); }
-
-function logEntry(narrative, decision, extra) {
-  const div = document.createElement('div');
-  div.className = 'entry';
-  const decisionStr = decision ? JSON.stringify(decision, null, 0) : '';
-  div.innerHTML = `
-    <div><strong>[Tuổi ${state.age}]</strong> <span class="narrative">${narrative}</span></div>
-    ${extra ? `<div style="color:#fc8;font-size:12px;">${extra}</div>` : ''}
-    ${decision ? `<div class="decision">Quyết định AI: ${decisionStr}</div>` : ''}
-  `;
-  el('log').prepend(div);
-}
-function logSimple(msg, isDeath=false) {
-  const div = document.createElement('div');
-  div.className = 'entry';
-  if (isDeath) div.classList.add('dead');
-  div.innerHTML = `<strong>[Tuổi ${state.age}]</strong> ${msg}`;
-  el('log').prepend(div);
+class GenLayer {
+  constructor(baseSeed) {
+    let bs = BigInt(baseSeed);
+    bs = BigInt.asIntN(64, bs * MULT + ADD); bs = BigInt.asIntN(64, bs + BigInt(baseSeed));
+    bs = BigInt.asIntN(64, bs * MULT + ADD); bs = BigInt.asIntN(64, bs + BigInt(baseSeed));
+    bs = BigInt.asIntN(64, bs * MULT + ADD); bs = BigInt.asIntN(64, bs + BigInt(baseSeed));
+    this.baseSeed = bs;
+    this.worldGenSeed = 0n;
+    this.chunkSeed = 0n;
+    this.parent = null;
+  }
+  initWorldGenSeed(seed) {
+    this.worldGenSeed = BigInt(seed);
+    if (this.parent) this.parent.initWorldGenSeed(seed);
+    this.worldGenSeed = BigInt.asIntN(64, this.worldGenSeed * MULT + ADD);
+    this.worldGenSeed = BigInt.asIntN(64, this.worldGenSeed + this.baseSeed);
+    this.worldGenSeed = BigInt.asIntN(64, this.worldGenSeed * MULT + ADD);
+    this.worldGenSeed = BigInt.asIntN(64, this.worldGenSeed + this.baseSeed);
+    this.worldGenSeed = BigInt.asIntN(64, this.worldGenSeed * MULT + ADD);
+    this.worldGenSeed = BigInt.asIntN(64, this.worldGenSeed + this.baseSeed);
+  }
+  initChunkSeed(x, z) {
+    this.chunkSeed = this.worldGenSeed;
+    this.chunkSeed = BigInt.asIntN(64, this.chunkSeed * MULT + ADD); this.chunkSeed = BigInt.asIntN(64, this.chunkSeed + BigInt(x));
+    this.chunkSeed = BigInt.asIntN(64, this.chunkSeed * MULT + ADD); this.chunkSeed = BigInt.asIntN(64, this.chunkSeed + BigInt(z));
+    this.chunkSeed = BigInt.asIntN(64, this.chunkSeed * MULT + ADD); this.chunkSeed = BigInt.asIntN(64, this.chunkSeed + BigInt(x));
+    this.chunkSeed = BigInt.asIntN(64, this.chunkSeed * MULT + ADD); this.chunkSeed = BigInt.asIntN(64, this.chunkSeed + BigInt(z));
+  }
+  nextInt(bound) {
+    let i = Number(BigInt.asIntN(32, this.chunkSeed >> 24n) % bound);
+    if (i < 0) i += bound;
+    this.chunkSeed = BigInt.asIntN(64, this.chunkSeed * MULT + ADD);
+    this.chunkSeed = BigInt.asIntN(64, this.chunkSeed + this.worldGenSeed);
+    return i;
+  }
+  selectRandom(arr) { return arr[this.nextInt(arr.length)]; }
+  selectModeOrRandom(a,b,c,d) {
+    if(b===c&&c===d)return b; if(a===b&&a===c)return a; if(a===b&&a===d)return a;
+    if(a===c&&a===d)return a; if(a===b&&c!==d)return a; if(a===c&&b!==d)return a;
+    if(a===d&&b!==c)return a; if(b===c&&a!==d)return b; if(b===d&&a!==c)return b;
+    if(c===d&&a!==b)return c; return this.selectRandom([a,b,c,d]);
+  }
+  static isBiomeOceanic(id) { return id===B.OCEAN||id===B.DEEP_OCEAN||id===B.FROZEN_OCEAN; }
+  static biomesEqualOrMesaPlateau(a,b) {
+    if(a===b)return true;
+    if(a===B.MESA_ROCK||a===B.MESA_CLEAR_ROCK) return b===B.MESA_ROCK||b===B.MESA_CLEAR_ROCK;
+    return false;
+  }
+  getInts(ax,ay,aw,ah) { return new Int32Array(aw*ah); }
 }
 
-function updateUI() {
-  el('ageVal').textContent = state.age;
-  el('cashVal').textContent = fmt(state.cash);
-  el('cashVal').className = state.cash < 0 ? 'cash-negative' : '';
-  el('savingsVal').textContent = fmt(state.savings);
-  el('stockVal').textContent = fmt(state.stock);
-  el('debtVal').textContent = fmt(state.debt);
-  el('rearingDebtVal').textContent = fmt(state.rearingDebt);
-  el('rearingInterestTag').textContent = state.age >= REARING_DEBT_INTEREST_START_AGE && state.rearingDebt > 0 ? `(đang bị tính lãi ${REARING_DEBT_INTEREST_RATE}%/năm)` : '';
-  el('interestVal').textContent = state.interestRate.toFixed(1);
-  el('inflationVal').textContent = state.inflation.toFixed(1) + '%';
-  el('stateVal').textContent = `${state.status} — ${state.job}`;
-  el('healthBar').style.width = Math.max(0,state.health) + '%';
-  el('healthPct').textContent = Math.round(state.health) + '%';
-  el('stressBar').style.width = Math.min(100,state.stress) + '%';
-  el('stressPct').textContent = Math.round(state.stress) + '%';
-  el('genInfo').textContent = `Thế hệ #${state.generation}`;
-  el('gambleVal').textContent = (state.timeSplit.gamble || 0) > 0 ? `Đang cờ bạc (${state.timeSplit.gamble}%)` : 'Không cờ bạc';
-
-  el('totalSavedVal').textContent = fmt(state.totals.saved) + ' VNĐ';
-  el('totalSavingsWithdrawnVal').textContent = fmt(state.totals.savingsWithdrawn) + ' VNĐ';
-  el('totalInvestedVal').textContent = fmt(state.totals.invested) + ' VNĐ';
-  el('totalWithdrawnVal').textContent = fmt(state.totals.withdrawn) + ' VNĐ';
-  el('totalBorrowedVal').textContent = fmt(state.totals.borrowed) + ' VNĐ';
-  el('totalRepaidVal').textContent = fmt(state.totals.repaid) + ' VNĐ';
-  el('totalRearingRepaidVal').textContent = fmt(state.totals.rearingRepaid) + ' VNĐ';
-  el('totalTaxVal').textContent = fmt(state.totals.taxPaid) + ' VNĐ';
-  el('totalLivingVal').textContent = fmt(state.totals.livingCost) + ' VNĐ';
-  el('totalLotteryVal').textContent = fmt(state.totals.lottery) + ' VNĐ';
-  el('totalLotteryWinVal').textContent = fmt(state.totals.lotteryWin) + ' VNĐ';
-  el('totalGambleVal').textContent = fmt(state.totals.gamble) + ' VNĐ';
-  el('totalGambleWinVal').textContent = fmt(state.totals.gambleWin) + ' VNĐ';
-
-  drawPie();
-  drawLineChart();
-}
-
-function drawPie() {
-  const ctx = el('pieChart').getContext('2d');
-  ctx.clearRect(0,0,160,160);
-  const data = state.timeSplit;
-  const labels = [
-    ['Ngủ','sleep','#5af'],
-    ['Làm việc','work','#3a5'],
-    ['Tăng ca','overtime','#f90'],
-    ['Nghỉ ngơi','rest','#a5f'],
-    ['Cờ bạc','gamble','#e33']
-  ];
-  let total = (data.sleep||0)+(data.work||0)+(data.overtime||0)+(data.rest||0)+(data.gamble||0);
-  if (total === 0) total = 1;
-  let start = -Math.PI/2;
-  const legend = el('pieLegend');
-  legend.innerHTML = '';
-  labels.forEach(([name,key,color]) => {
-    const val = data[key] || 0;
-    if (val <= 0) return;
-    let slice = (val/total) * Math.PI*2;
-    ctx.beginPath();
-    ctx.moveTo(80,80);
-    ctx.arc(80,80,70,start,start+slice);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    start += slice;
-    legend.innerHTML += `<div><span class="swatch" style="background:${color}"></span>${name}: ${Math.round(val/total*100)}%</div>`;
-  });
-}
-
-function drawLineChart() {
-  const canvas = el('lineChart');
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  ctx.clearRect(0,0,w,h);
-  const hist = state.marketHistory.slice(-30);
-  if (hist.length === 0) return;
-  const padding = 20;
-  const maxAbs = Math.max(10, ...hist.map(p => Math.abs(p.trend)));
-  const zeroY = h/2;
-  const scaleY = (h/2 - padding) / maxAbs;
-  const stepX = (w - padding*2) / Math.max(1, hist.length - 1);
-  ctx.strokeStyle = '#444';
-  ctx.beginPath();
-  ctx.moveTo(padding, zeroY);
-  ctx.lineTo(w-padding, zeroY);
-  ctx.stroke();
-  ctx.strokeStyle = '#6cf';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  hist.forEach((p, i) => {
-    const x = padding + i*stepX;
-    const y = zeroY - p.trend*scaleY;
-    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  });
-  ctx.stroke();
-  hist.forEach((p, i) => {
-    const x = padding + i*stepX;
-    const y = zeroY - p.trend*scaleY;
-    ctx.fillStyle = p.trend >= 0 ? '#5f5' : '#f66';
-    ctx.beginPath();
-    ctx.arc(x,y,3,0,Math.PI*2);
-    ctx.fill();
-  });
-  ctx.fillStyle = '#aaa';
-  ctx.font = '11px sans-serif';
-  const last = hist[hist.length-1];
-  ctx.fillText(`Tuổi ${last.age}: ${last.trend>0?'+':''}${last.trend}%`, padding, 14);
-}
-
-function baseLifeStagePrompt() {
-  let stageDesc = "";
-  if (state.age <= 3) stageDesc = "Giai đoạn sơ sinh: chỉ ăn chơi. Ngân hàng nuôi dưỡng toàn bộ, không tính lãi. KHÔNG được thực hiện bất kỳ hành động tài chính nào.";
-  else if (state.age <= 8) stageDesc = "Giai đoạn thiếu nhi: học tập, ăn, chơi. KHÔNG được thực hiện bất kỳ hành động tài chính nào.";
-  else if (state.age <= 17) stageDesc = "Giai đoạn thiếu niên: lo tương lai, học tập. KHÔNG được thực hiện BẤT KỲ hành động tài chính nào (gửi/rút tiết kiệm, đầu tư, vay, xổ số, casino đều bị khóa cho tới 18 tuổi).";
-  else if (state.age === 18) stageDesc = "Vừa đủ 18 tuổi: TỪ NĂM NAY được phép thực hiện mọi hành động tài chính. Bắt đầu phải trả nợ nuôi dưỡng và tự lo sinh hoạt phí.";
-  else if (state.age <= 20) stageDesc = "Đang học đại học + đi làm thêm.";
-  else if (state.age === 21) stageDesc = "Có thể tốt nghiệp hoặc đi làm lương thấp, hoặc học lại.";
-  else if (state.age < 30) stageDesc = "Người trưởng thành trẻ: đi làm, tích lũy, đầu tư. Từ 30 tuổi nợ nuôi dưỡng chưa trả hết sẽ bị tính lãi.";
-  else if (state.age < 35) stageDesc = "Áp lực kết hôn, chi phí đám cưới, tiền mừng.";
-  else if (state.age < 40) stageDesc = "Có thể có con. CẢNH BÁO: nợ nuôi dưỡng đang bị tính lãi nếu chưa trả hết, từ 40 tuổi sẽ bị cưỡng chế trừ lương.";
-  else if (state.age < 60) stageDesc = "Trung niên. Nếu còn nợ nuôi dưỡng, hệ thống TỰ ĐỘNG cưỡng chế trừ lương mỗi năm.";
-  else if (state.age < 90) stageDesc = "Cao niên: chuẩn bị nghỉ hưu.";
-  else stageDesc = "Cuối đời: chuẩn bị để lại tài sản/nợ cho thế hệ sau.";
-  return stageDesc;
-}
-
-async function callGroqDecision() {
-  const salaryTableText = Object.entries(SALARY_TABLE)
-    .map(([key, v]) => `- ${key}: ${v.label}, ${fmt(v.min)} - ${fmt(v.max)} VNĐ/năm`)
-    .join('\n');
-
-  const isMinor = state.age < ADULT_AGE;
-
-  const prompt = `
-Bạn là một AI đang mô phỏng MỘT NĂM trong cuộc đời của một nhân vật, hiện tại nhân vật ${state.age} tuổi.
-Giai đoạn hiện tại: ${baseLifeStagePrompt()}
-
-Thông tin hiện tại:
-- Tiền mặt: ${state.cash} VNĐ
-- Tiết kiệm ngân hàng: ${state.savings} VNĐ
-- Đầu tư chứng khoán: ${state.stock} VNĐ
-- Nợ vay ngân hàng (có lãi): ${state.debt} VNĐ (lãi suất ${state.interestRate}%/năm)
-- Nợ nuôi dưỡng: ${state.rearingDebt} VNĐ ${state.age >= REARING_DEBT_INTEREST_START_AGE ? `(ĐANG bị tính lãi phạt ${REARING_DEBT_INTEREST_RATE}%/năm)` : ''}
-- Sức khỏe: ${state.health}/100
-- Căng thẳng: ${state.stress}/100
-- Công việc: ${state.job}, lương năm: ${state.salary}
-- Đã kết hôn: ${state.married}, số con: ${state.children}
-- Thị trường chứng khoán năm nay: ${state.marketTrend}%
-- Lạm phát năm nay: ${state.inflation}%
-
-BẢNG MỨC LƯƠNG THAM KHẢO:
-${salaryTableText}
-LƯU Ý: nếu dưới 18 tuổi, lương THỰC NHẬN luôn là 0 VNĐ dù chọn tier nào.
-
-QUAN TRỌNG - QUY TẮC TIỀN BẠC: Bạn KHÔNG cần và KHÔNG ĐƯỢC tự chọn số tiền cụ thể (không có field "amount"). Hệ thống sẽ TỰ ĐỘNG tính số tiền chính xác cho mỗi action dựa trên tỷ lệ % cố định so với tài sản hiện có của nhân vật. Bạn chỉ cần chọn ĐÚNG loại action phù hợp với hoàn cảnh, hệ thống lo phần còn lại.
-
-${isMinor ? `⛔ NHÂN VẬT DƯỚI 18 TUỔI: TUYỆT ĐỐI KHÔNG được chọn bất kỳ action tài chính nào sau đây: gửi_tiết_kiệm, rút_tiết_kiệm, đầu_tư_chứng_khoán, rút_chứng_khoán, vay_ngân_hàng, trả_nợ, trả_nợ_nuôi_dưỡng, mua_xổ_số, chơi_casino. Chỉ được chọn: nghỉ_ngơi, học_thêm, không_làm_gì.` : `✅ Nhân vật đã đủ 18 tuổi, được phép chọn mọi action tài chính.`}
-
-Quy tắc thuế (tự động áp dụng):
-- Lương ≥ 1 tỷ/năm: thuế 30%
-- Lương < 1 tỷ/năm và còn nợ (vay hoặc nuôi dưỡng): miễn thuế
-- Lương < 1 tỷ/năm và không còn nợ: thuế 10%
-
-Nếu kết hôn, chi phí và tiền mừng tự động random, không cần quan tâm số tiền.
-
-Trả về JSON THUẦN (không markdown, KHÔNG có field "amount"):
-{
-  "narrative": "mô tả ngắn gọn 1-2 câu bằng tiếng Việt",
-  "reason": "lý do ngắn gọn",
-  "job": "tên công việc",
-  "salary_tier": "lao_dong_pho_thong | van_phong | chuyen_mon | quan_ly | khong_co_luong",
-  "action": "gửi_tiết_kiệm | rút_tiết_kiệm | đầu_tư_chứng_khoán | rút_chứng_khoán | vay_ngân_hàng | trả_nợ | trả_nợ_nuôi_dưỡng | mua_xổ_số | chơi_casino | nghỉ_ngơi | tăng_ca | học_thêm | kết_hôn | sinh_con | không_làm_gì",
-  "time_split": {"sleep": %, "work": %, "overtime": %, "rest": %, "gamble": %} (tổng = 100),
-  "health_change": -30 đến +20,
-  "stress_change": -20 đến +30
-}
-Chỉ trả về JSON.
-`;
-
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
-      body: JSON.stringify({ model: GROQ_MODEL, messages: [{ role: "user", content: prompt }], temperature: 0.9 })
-    });
-    const data = await res.json();
-    let text = data.choices?.[0]?.message?.content || "{}";
-    text = text.replace(/```json|```/g,'').trim();
-    return JSON.parse(text);
-  } catch (e) {
-    console.error("Groq error", e);
-    return { narrative: "AI không thể quyết định năm nay (lỗi kết nối).", reason:"Lỗi API", action: "không_làm_gì", time_split:state.timeSplit, health_change:-5, stress_change:5, salary_tier: "khong_co_luong", job: state.job };
+class GLIsland extends GenLayer {
+  getInts(ax,ay,aw,ah) {
+    const out = new Int32Array(aw*ah);
+    for(let i=0;i<ah;i++) for(let j=0;j<aw;j++) {
+      this.initChunkSeed(ax+j,ay+i);
+      out[j+i*aw] = this.nextInt(10)===0?1:0;
+    }
+    if(ax<=-1&&ax+aw>0&&ay<=-1&&ay+ah>0) out[-ax+(-ay)*aw]=1;
+    return out;
   }
 }
-
-function applyEconomy() {
-  state.marketTrend = Math.round((Math.random()*40 - 15));
-  state.stock = state.stock * (1 + state.marketTrend/100);
-  state.marketHistory.push({ age: state.age, trend: state.marketTrend });
-  state.inflation = Math.max(1, Math.round(state.inflation + (Math.random()*4 - 2)));
-  state.interestRate = Math.min(25, state.interestRate + (Math.random()*1 - 0.3));
-  state.savings = state.savings * (1 + 0.05);
-  if (state.debt > 0) state.debt = state.debt * (1 + state.interestRate/100);
-  if (state.age >= REARING_DEBT_INTEREST_START_AGE && state.rearingDebt > 0) {
-    state.rearingDebt = state.rearingDebt * (1 + REARING_DEBT_INTEREST_RATE/100);
-  }
-}
-
-async function tick() {
-  if (state.age > 100) { endLife(); return; }
-
-  applyEconomy();
-  const decision = await callGroqDecision();
-  const isMinor = state.age < ADULT_AGE;
-
-  if (decision.job) state.job = decision.job;
-
-  // ====== XỬ LÝ LƯƠNG (chặn cứng dưới 18 tuổi) ======
-  if (decision.salary_tier && decision.salary_tier !== "khong_co_luong" && SALARY_TABLE[decision.salary_tier]) {
-    const tier = decision.salary_tier;
-    if (isMinor) {
-      state.salary = 0;
-      state.currentTier = null;
-    } else {
-      if (state.currentTier !== tier || !state.salary) {
-        state.salary = randRange(SALARY_TABLE[tier].min, SALARY_TABLE[tier].max);
-        state.currentTier = tier;
+class GLFuzzyZoom extends GenLayer {
+  selectModeOrRandom(a,b,c,d){return this.selectRandom([a,b,c,d]);}
+  getInts(ax,ay,aw,ah) { return this._zoom(ax,ay,aw,ah,true); }
+  _zoom(ax,ay,aw,ah,fuzzy){
+    const pi=ax>>1,pj=ay>>1,pk=(aw>>1)+2,pl=(ah>>1)+2;
+    const par=this.parent.getInts(pi,pj,pk,pl);
+    const ow=(pk-1)<<1,oh=(pl-1)<<1;
+    const tmp=new Int32Array(ow*oh);
+    for(let k1=0;k1<pl-1;k1++){
+      let l1=(k1<<1)*ow,i2=0;
+      let j2=par[i2+0+(k1+0)*pk];
+      for(let k2=par[i2+0+(k1+1)*pk];i2<pk-1;i2++){
+        this.initChunkSeed((i2+pi)<<1,(k1+pj)<<1);
+        const l2=par[i2+1+(k1+0)*pk],i3=par[i2+1+(k1+1)*pk];
+        tmp[l1]=j2; tmp[l1+++ow]=fuzzy?this.selectRandom([j2,k2]):this.selectModeOrRandom(j2,j2,k2,k2);
+        tmp[l1]=this.selectRandom([j2,l2]); tmp[l1+++ow]=fuzzy?this.selectRandom([j2,l2,k2,i3]):this.selectModeOrRandom(j2,l2,k2,i3);
+        j2=l2; k2=i3;
       }
     }
-  } else {
-    state.salary = 0;
-    state.currentTier = null;
+    const out=new Int32Array(aw*ah);
+    for(let j3=0;j3<ah;j3++) for(let k3=0;k3<aw;k3++) out[k3+j3*aw]=tmp[(k3+(ax&1))+(j3+(ay&1))*ow];
+    return out;
   }
-
-  const taxAmount = calculateTax(state.salary, state.debt, state.rearingDebt);
-  let netSalary = state.salary - taxAmount;
-  state.totals.taxPaid += taxAmount;
-
-  // ====== CƯỠNG CHẾ TRỪ NỢ NUÔI DƯỠNG TỪ 40 TUỔI ======
-  let forcedCollectionNote = "";
-  if (state.age >= REARING_DEBT_FORCE_COLLECT_AGE && state.rearingDebt > 0 && netSalary > 0) {
-    const forced = Math.min(netSalary, state.rearingDebt);
-    state.rearingDebt -= forced;
-    netSalary -= forced;
-    state.totals.rearingRepaid += forced;
-    forcedCollectionNote = `⚖️ CƯỠNG CHẾ trừ lương trả nợ nuôi dưỡng: ${fmt(forced)} VNĐ (còn ${fmt(state.rearingDebt)} VNĐ)`;
-  }
-
-  state.cash += netSalary;
-
-  // ====== CHI PHÍ SINH HOẠT / NỢ NUÔI DƯỠNG ======
-  let livingNote = "";
-  if (isMinor) {
-    const rearingCost = calculateRearingCost(state.age, state.inflation);
-    state.rearingDebt += rearingCost;
-    livingNote = `🏦 Ngân hàng ứng nuôi dưỡng: +${fmt(rearingCost)} VNĐ (không lãi)`;
-  } else {
-    if (!state.rearingDebtLocked && state.rearingDebt > 0) {
-      state.rearingDebtLocked = true;
-      livingNote = `📜 Đủ 18 tuổi: bắt đầu phải trả nợ nuôi dưỡng ${fmt(state.rearingDebt)} VNĐ | `;
-    }
-    const livingCostRaw = calculateLivingCost(state.age, state.children, state.inflation);
-    const livingCost = Math.max(0, Math.min(livingCostRaw, state.cash));
-    state.cash -= livingCost;
-    state.totals.livingCost += livingCost;
-    livingNote += `🏠 Chi phí sinh hoạt: ${fmt(livingCost)} VNĐ${livingCost < livingCostRaw ? ' (không đủ tiền trả hết!)' : ''}`;
-  }
-
-  let taxNote = "";
-  if (state.salary > 0 && !isMinor) {
-    if (taxAmount > 0) taxNote = `💸 Thuế TNCN: ${fmt(taxAmount)} VNĐ`;
-    else taxNote = `✅ Miễn thuế (còn nợ)`;
-  }
-
-  // ====== XỬ LÝ ACTION — SỐ TIỀN DO HỆ THỐNG TỰ TÍNH, AI KHÔNG QUYẾT ĐỊNH ======
-  let extra = "";
-  let action = decision.action;
-
-  // Chặn cứng mọi action tài chính nếu dưới 18 tuổi, ép về "không_làm_gì"
-  if (isMinor && FINANCIAL_ACTIONS.has(action)) {
-    extra = `⛔ Dưới 18 tuổi: không được thực hiện "${action}", hành động bị hủy`;
-    action = "không_làm_gì";
-  }
-
-  if (!isMinor && FINANCIAL_ACTIONS.has(action) && state.cash <= 0 && action !== "rút_tiết_kiệm" && action !== "rút_chứng_khoán" && action !== "vay_ngân_hàng") {
-    extra = `❌ Không đủ tiền mặt (${fmt(state.cash)} VNĐ) — không thể thực hiện "${action}"`;
-  } else {
-    const calc = MONEY_RULES[action];
-    const amt = calc ? Math.max(0, calc(state)) : 0;
-
-    switch (action) {
-      case "gửi_tiết_kiệm":
-        if (amt > 0) { state.cash -= amt; state.savings += amt; state.totals.saved += amt; extra = `Gửi tiết kiệm: ${fmt(amt)} VNĐ (30% tiền mặt)`; }
-        else extra = `Không đủ tiền để gửi tiết kiệm`;
-        break;
-      case "rút_tiết_kiệm":
-        if (amt > 0) { state.savings -= amt; state.cash += amt; state.totals.savingsWithdrawn += amt; extra = `Rút tiết kiệm: ${fmt(amt)} VNĐ (50% số dư)`; }
-        else extra = `Không còn tiết kiệm để rút`;
-        break;
-      case "đầu_tư_chứng_khoán":
-        if (amt > 0) { state.cash -= amt; state.stock += amt; state.totals.invested += amt; extra = `Đầu tư chứng khoán: ${fmt(amt)} VNĐ (25% tiền mặt)`; }
-        else extra = `Không đủ tiền để đầu tư`;
-        break;
-      case "rút_chứng_khoán":
-        if (amt > 0) { state.stock -= amt; state.cash += amt; state.totals.withdrawn += amt; extra = `Rút chứng khoán: ${fmt(amt)} VNĐ (50% số dư)`; }
-        else extra = `Không còn chứng khoán để rút`;
-        break;
-      case "vay_ngân_hàng":
-        state.debt += amt; state.cash += amt; state.totals.borrowed += amt;
-        extra = `Vay ngân hàng: ${fmt(amt)} VNĐ (200% lương năm)`; break;
-      case "trả_nợ":
-        if (amt > 0) { state.debt -= amt; state.cash -= amt; state.totals.repaid += amt; extra = `Trả nợ vay: ${fmt(amt)} VNĐ`; }
-        else extra = `Không đủ tiền hoặc không còn nợ vay`;
-        break;
-      case "trả_nợ_nuôi_dưỡng":
-        if (amt > 0) { state.rearingDebt -= amt; state.cash -= amt; state.totals.rearingRepaid += amt; extra = `Trả nợ nuôi dưỡng: ${fmt(amt)} VNĐ (còn ${fmt(state.rearingDebt)} VNĐ)`; }
-        else extra = `Không đủ tiền hoặc đã trả hết`;
-        break;
-      case "mua_xổ_số":
-        if (amt > 0) {
-          state.cash -= amt; state.totals.lottery += amt;
-          const { won, prize } = playLottery(amt);
-          if (won) { state.cash += prize; state.totals.lotteryWin += prize; }
-          extra = won ? `🎉 TRÚNG XỔ SỐ! Vé ${fmt(amt)} VNĐ → thắng ${fmt(prize)} VNĐ` : `Mua xổ số ${fmt(amt)} VNĐ, không trúng`;
-        } else extra = `Không đủ tiền mua xổ số`;
-        break;
-      case "chơi_casino":
-        if (amt > 0) {
-          const { won, result } = playCasino(amt);
-          state.cash += result; state.totals.gamble += amt; state.totals.gambleWin += result;
-          extra = won ? `🎰 Thắng casino: cược ${fmt(amt)} VNĐ, lãi ${fmt(result)} VNĐ` : `🎰 Thua casino: mất ${fmt(amt)} VNĐ`;
-        } else extra = `Không đủ tiền chơi casino`;
-        break;
-      case "kết_hôn": {
-        const weddingCost = Math.min(randRange(WEDDING_COST_MIN, WEDDING_COST_MAX), state.cash);
-        const weddingGift = randRange(WEDDING_GIFT_MIN, WEDDING_GIFT_MAX);
-        state.married = true; state.cash -= weddingCost; state.cash += weddingGift;
-        extra = `Chi phí đám cưới: ${fmt(weddingCost)} VNĐ, tiền mừng: ${fmt(weddingGift)} VNĐ`;
-        break;
-      }
-      case "sinh_con": {
-        const childCost = Math.min(Math.round(state.cash * 0.15), state.cash);
-        state.children += 1; state.cash -= childCost;
-        extra = `Chi phí sinh con: ${fmt(childCost)} VNĐ`;
-        break;
+}
+class GLZoom extends GLFuzzyZoom {
+  getInts(ax,ay,aw,ah){return this._zoom(ax,ay,aw,ah,false);}
+  static magnify(seed,layer,times){let g=layer;for(let i=0;i<times;i++){const z=new GLZoom(seed+BigInt(i));z.parent=g;g=z;}return g;}
+}
+class GLAddIsland extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const i=ax-1,j=ay-1,k=aw+2,l=ah+2;
+    const par=this.parent.getInts(i,j,k,l);
+    const out=new Int32Array(aw*ah);
+    for(let i1=0;i1<ah;i1++) for(let j1=0;j1<aw;j1++){
+      const k1=par[j1+0+(i1+0)*k],l1=par[j1+2+(i1+0)*k],i2=par[j1+0+(i1+2)*k],j2=par[j1+2+(i1+2)*k],k2=par[j1+1+(i1+1)*k];
+      this.initChunkSeed(j1+ax,i1+ay);
+      if(k2!==0||!(k1===0&&l1===0&&i2===0&&j2===0)){
+        if(k2>0&&(k1===0||l1===0||i2===0||j2===0)){
+          out[j1+i1*aw]=this.nextInt(5)===0?(k2===4?4:0):k2;
+        } else out[j1+i1*aw]=k2;
+      } else {
+        let lv=1,iv=1;
+        if(k1!==0&&this.nextInt(lv++)===0)iv=k1;
+        if(l1!==0&&this.nextInt(lv++)===0)iv=l1;
+        if(i2!==0&&this.nextInt(lv++)===0)iv=i2;
+        if(j2!==0&&this.nextInt(lv++)===0)iv=j2;
+        out[j1+i1*aw]=this.nextInt(3)===0?iv:(iv===4?4:0);
       }
     }
+    return out;
   }
+}
+class GLRemoveTooMuchOcean extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const i=ax-1,j=ay-1,k=aw+2,l=ah+2;
+    const par=this.parent.getInts(i,j,k,l);
+    const out=new Int32Array(aw*ah);
+    for(let i1=0;i1<ah;i1++) for(let j1=0;j1<aw;j1++){
+      const k1=par[j1+1+(i1+0)*k],l1=par[j1+2+(i1+1)*k],i2=par[j1+0+(i1+1)*k],j2=par[j1+1+(i1+2)*k],k2=par[j1+1+(i1+1)*k];
+      this.initChunkSeed(j1+ax,i1+ay);
+      out[j1+i1*aw]=(k2===0&&k1===0&&l1===0&&i2===0&&j2===0&&this.nextInt(2)===0)?1:k2;
+    }
+    return out;
+  }
+}
+class GLAddSnow extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const i=ax-1,j=ay-1,k=aw+2,l=ah+2;
+    const par=this.parent.getInts(i,j,k,l);
+    const out=new Int32Array(aw*ah);
+    for(let i1=0;i1<ah;i1++) for(let j1=0;j1<aw;j1++){
+      const k1=par[j1+1+(i1+1)*k];
+      this.initChunkSeed(j1+ax,i1+ay);
+      if(k1===0){out[j1+i1*aw]=0;continue;}
+      let l1=this.nextInt(6);
+      if(l1===0)l1=4; else if(l1<=1)l1=3; else l1=1;
+      out[j1+i1*aw]=l1;
+    }
+    return out;
+  }
+}
+class GLEdge extends GenLayer {
+  constructor(seed,parent,mode){super(seed);this.parent=parent;this.mode=mode;}
+  getInts(ax,ay,aw,ah){
+    const i=ax-1,j=ay-1,k=1+aw+1,l=1+ah+1;
+    const par=this.parent.getInts(i,j,k,l);
+    const out=new Int32Array(aw*ah);
+    for(let i1=0;i1<ah;i1++) for(let j1=0;j1<aw;j1++){
+      this.initChunkSeed(j1+ax,i1+ay);
+      let k1=par[j1+1+(i1+1)*k];
+      const N=par[j1+1+(i1+0)*k],E=par[j1+2+(i1+1)*k],W=par[j1+0+(i1+1)*k],S=par[j1+1+(i1+2)*k];
+      if(this.mode==='COOL_WARM'){
+        if(k1===1){const fw=N===3||E===3||W===3||S===3,fi=N===4||E===4||W===4||S===4;if(fw||fi)k1=2;}
+      } else if(this.mode==='HEAT_ICE'){
+        if(k1===4){const fc=N===2||E===2||W===2||S===2,fw=N===1||E===1||W===1||S===1;if(fc||fw)k1=3;}
+      } else { // SPECIAL
+        if(k1!==0&&this.nextInt(13)===0)k1|=(1+this.nextInt(15))<<8&3840;
+      }
+      out[j1+i1*aw]=k1;
+    }
+    return out;
+  }
+}
+class GLDeepOcean extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const i=ax-1,j=ay-1,k=aw+2,l=ah+2;
+    const par=this.parent.getInts(i,j,k,l);
+    const out=new Int32Array(aw*ah);
+    for(let i1=0;i1<ah;i1++) for(let j1=0;j1<aw;j1++){
+      const N=par[j1+1+(i1+0)*k],E=par[j1+2+(i1+1)*k],W=par[j1+0+(i1+1)*k],S=par[j1+1+(i1+2)*k],C=par[j1+1+(i1+1)*k];
+      let cnt=0; if(N===0)cnt++; if(E===0)cnt++; if(W===0)cnt++; if(S===0)cnt++;
+      out[j1+i1*aw]=(C===0&&cnt>3)?B.DEEP_OCEAN:C;
+    }
+    return out;
+  }
+}
+class GLAddMushroomIsland extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const i=ax-1,j=ay-1,k=aw+2,l=ah+2;
+    const par=this.parent.getInts(i,j,k,l);
+    const out=new Int32Array(aw*ah);
+    for(let i1=0;i1<ah;i1++) for(let j1=0;j1<aw;j1++){
+      const k1=par[j1+0+(i1+0)*k],l1=par[j1+2+(i1+0)*k],i2=par[j1+0+(i1+2)*k],j2=par[j1+2+(i1+2)*k],k2=par[j1+1+(i1+1)*k];
+      this.initChunkSeed(j1+ax,i1+ay);
+      out[j1+i1*aw]=(k2===0&&k1===0&&l1===0&&i2===0&&j2===0&&this.nextInt(100)===0)?B.MUSHROOM_ISLAND:k2;
+    }
+    return out;
+  }
+}
+class GLBiome extends GenLayer {
+  constructor(seed,parent){
+    super(seed);this.parent=parent;
+    this.warm=[B.DESERT,B.DESERT,B.DESERT,B.SAVANNA,B.SAVANNA,B.PLAINS];
+    this.medium=[B.FOREST,B.ROOFED_FOREST,B.EXTREME_HILLS,B.PLAINS,B.BIRCH_FOREST,B.SWAMPLAND];
+    this.cold=[B.FOREST,B.EXTREME_HILLS,B.TAIGA,B.PLAINS];
+    this.icy=[B.ICE_PLAINS,B.ICE_PLAINS,B.ICE_PLAINS,B.COLD_TAIGA];
+  }
+  getInts(ax,ay,aw,ah){
+    const par=this.parent.getInts(ax,ay,aw,ah);
+    const out=new Int32Array(aw*ah);
+    for(let i=0;i<ah;i++) for(let j=0;j<aw;j++){
+      this.initChunkSeed(j+ax,i+ay);
+      let k=par[j+i*aw];
+      const l=(k&3840)>>8; k=k&~3840;
+      if(GenLayer.isBiomeOceanic(k)||k===B.MUSHROOM_ISLAND){out[j+i*aw]=k;}
+      else if(k===1){out[j+i*aw]=l>0?(this.nextInt(3)===0?B.MESA_CLEAR_ROCK:B.MESA_ROCK):this.selectRandom(this.warm);}
+      else if(k===2){out[j+i*aw]=l>0?B.JUNGLE:this.selectRandom(this.medium);}
+      else if(k===3){out[j+i*aw]=l>0?B.REDWOOD_TAIGA:this.selectRandom(this.cold);}
+      else if(k===4){out[j+i*aw]=this.selectRandom(this.icy);}
+      else out[j+i*aw]=B.MUSHROOM_ISLAND;
+    }
+    return out;
+  }
+}
+class GLRiverInit extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const par=this.parent.getInts(ax,ay,aw,ah);
+    const out=new Int32Array(aw*ah);
+    for(let i=0;i<ah;i++) for(let j=0;j<aw;j++){
+      this.initChunkSeed(j+ax,i+ay);
+      out[j+i*aw]=par[j+i*aw]>0?this.nextInt(299999)+2:0;
+    }
+    return out;
+  }
+}
+class GLHills extends GenLayer {
+  constructor(seed,parent,riverLayer){super(seed);this.parent=parent;this.riverLayer=riverLayer;}
+  initWorldGenSeed(seed){this.parent.initWorldGenSeed(seed);this.riverLayer.initWorldGenSeed(seed);super.initWorldGenSeed(seed);}
+  getInts(ax,ay,aw,ah){
+    const biomes=this.parent.getInts(ax-1,ay-1,aw+2,ah+2);
+    const rivers=this.riverLayer.getInts(ax-1,ay-1,aw+2,ah+2);
+    const out=new Int32Array(aw*ah);
+    const hmap={
+      [B.DESERT]:B.DESERT_HILLS,[B.FOREST]:B.FOREST_HILLS,[B.BIRCH_FOREST]:B.BIRCH_FOREST_HILLS,
+      [B.ROOFED_FOREST]:B.PLAINS,[B.TAIGA]:B.TAIGA_HILLS,[B.REDWOOD_TAIGA]:B.REDWOOD_TAIGA_HILLS,
+      [B.COLD_TAIGA]:B.COLD_TAIGA_HILLS,[B.PLAINS]:B.FOREST,[B.ICE_PLAINS]:B.ICE_MOUNTAINS,
+      [B.JUNGLE]:B.JUNGLE_HILLS,[B.EXTREME_HILLS]:B.EXTREME_HILLS_WITH_TREES,
+      [B.SAVANNA]:B.SAVANNA_PLATEAU,[B.MESA_CLEAR_ROCK]:B.MESA_ROCK,
+    };
+    // mutation map
+    const mmap={
+      [B.PLAINS]:B.MUTATED_PLAINS,[B.DESERT]:B.MUTATED_DESERT,[B.EXTREME_HILLS]:B.MUTATED_EXTREME_HILLS,
+      [B.FOREST]:B.MUTATED_FOREST,[B.TAIGA]:B.MUTATED_TAIGA,[B.SWAMPLAND]:B.MUTATED_SWAMPLAND,
+      [B.ICE_PLAINS]:B.MUTATED_ICE_FLATS,[B.JUNGLE]:B.MUTATED_JUNGLE,[B.JUNGLE_EDGE]:B.MUTATED_JUNGLE_EDGE,
+      [B.BIRCH_FOREST]:B.MUTATED_BIRCH_FOREST,[B.BIRCH_FOREST_HILLS]:B.MUTATED_BIRCH_FOREST_HILLS,
+      [B.ROOFED_FOREST]:B.MUTATED_ROOFED_FOREST,[B.COLD_TAIGA]:B.MUTATED_TAIGA_COLD,
+      [B.REDWOOD_TAIGA]:B.MUTATED_REDWOOD_TAIGA,[B.REDWOOD_TAIGA_HILLS]:B.MUTATED_REDWOOD_TAIGA_HILLS,
+      [B.EXTREME_HILLS_WITH_TREES]:B.MUTATED_EXTREME_HILLS_WITH_TREES,
+      [B.SAVANNA]:B.MUTATED_SAVANNA,[B.SAVANNA_PLATEAU]:B.MUTATED_SAVANNA_ROCK,
+      [B.MESA]:B.MUTATED_MESA,[B.MESA_ROCK]:B.MUTATED_MESA_ROCK,[B.MESA_CLEAR_ROCK]:B.MUTATED_MESA_CLEAR_ROCK,
+    };
+    for(let i=0;i<ah;i++) for(let j=0;j<aw;j++){
+      this.initChunkSeed(j+ax,i+ay);
+      const k=biomes[j+1+(i+1)*(aw+2)];
+      const l=rivers[j+1+(i+1)*(aw+2)];
+      const flag=(l-2)%29===0;
+      let res=k;
+      if(k!==0&&l>=2&&(l-2)%29===1&&mmap[k]!==undefined){
+        res=mmap[k];
+      } else if(this.nextInt(3)!==0&&!flag){
+        res=k;
+      } else {
+        res=hmap[k]!==undefined?hmap[k]:k;
+        if(flag&&res!==k){const m2=mmap[res];if(m2!==undefined)res=m2;}
+      }
+      out[j+i*aw]=res;
+    }
+    return out;
+  }
+}
+class GLRareBiome extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const par=this.parent.getInts(ax-1,ay-1,aw+2,ah+2);
+    const out=new Int32Array(aw*ah);
+    for(let i=0;i<ah;i++) for(let j=0;j<aw;j++){
+      this.initChunkSeed(j+ax,i+ay);
+      const k=par[j+1+(i+1)*(aw+2)];
+      out[j+i*aw]=(this.nextInt(57)===0&&k===B.PLAINS)?B.MUTATED_PLAINS:k;
+    }
+    return out;
+  }
+}
+class GLShore extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const par=this.parent.getInts(ax-1,ay-1,aw+2,ah+2);
+    const out=new Int32Array(aw*ah);
+    const jungles=new Set([B.JUNGLE,B.JUNGLE_HILLS,B.JUNGLE_EDGE,B.MUTATED_JUNGLE,B.MUTATED_JUNGLE_EDGE]);
+    for(let i=0;i<ah;i++) for(let j=0;j<aw;j++){
+      const k=par[j+1+(i+1)*(aw+2)];
+      const N=par[j+1+(i+0)*(aw+2)],E=par[j+2+(i+1)*(aw+2)],W=par[j+0+(i+1)*(aw+2)],S=par[j+1+(i+2)*(aw+2)];
+      let res=k;
+      if(k===B.MUSHROOM_ISLAND){
+        res=(N!==B.OCEAN&&E!==B.OCEAN&&W!==B.OCEAN&&S!==B.OCEAN)?k:B.MUSHROOM_ISLAND_SHORE;
+      } else if(jungles.has(k)){
+        const jc=(id)=>jungles.has(id)||id===B.BEACH||id===B.JUNGLE_EDGE||GenLayer.isBiomeOceanic(id);
+        if(jc(N)&&jc(E)&&jc(W)&&jc(S)){
+          res=GenLayer.isBiomeOceanic(N)||GenLayer.isBiomeOceanic(E)||GenLayer.isBiomeOceanic(W)||GenLayer.isBiomeOceanic(S)?B.BEACH:k;
+        } else res=B.JUNGLE_EDGE;
+      } else if(k!==B.EXTREME_HILLS&&k!==B.EXTREME_HILLS_WITH_TREES&&k!==B.EXTREME_HILLS_EDGE){
+        if(k===B.ICE_PLAINS){
+          res=(GenLayer.isBiomeOceanic(N)||GenLayer.isBiomeOceanic(E)||GenLayer.isBiomeOceanic(W)||GenLayer.isBiomeOceanic(S))?B.COLD_BEACH:k;
+        } else if(k!==B.MESA&&k!==B.MESA_ROCK&&k!==B.MESA_CLEAR_ROCK&&k!==B.MUTATED_MESA&&k!==B.MUTATED_MESA_ROCK&&k!==B.MUTATED_MESA_CLEAR_ROCK){
+          if(k!==B.OCEAN&&k!==B.DEEP_OCEAN&&k!==B.RIVER&&k!==B.SWAMPLAND&&k!==B.MUTATED_SWAMPLAND){
+            if(GenLayer.isBiomeOceanic(N)||GenLayer.isBiomeOceanic(E)||GenLayer.isBiomeOceanic(W)||GenLayer.isBiomeOceanic(S))res=B.BEACH;
+          }
+        }
+      } else {
+        if(!GenLayer.isBiomeOceanic(N)&&!GenLayer.isBiomeOceanic(E)&&!GenLayer.isBiomeOceanic(W)&&!GenLayer.isBiomeOceanic(S)){
+          if(k!==N&&k!==E&&k!==W&&k!==S) res=B.STONE_BEACH;
+        }
+      }
+      out[j+i*aw]=res;
+    }
+    return out;
+  }
+}
+class GLSmooth extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const i=ax-1,j=ay-1,k=aw+2,l=ah+2;
+    const par=this.parent.getInts(i,j,k,l);
+    const out=new Int32Array(aw*ah);
+    for(let i1=0;i1<ah;i1++) for(let j1=0;j1<aw;j1++){
+      const W=par[j1+0+(i1+1)*k],E=par[j1+2+(i1+1)*k],N=par[j1+1+(i1+0)*k],S=par[j1+1+(i1+2)*k];
+      let C=par[j1+1+(i1+1)*k];
+      if(W===E&&N===S){this.initChunkSeed(j1+ax,i1+ay);C=this.nextInt(2)===0?W:N;}
+      else{if(W===E)C=W; if(N===S)C=N;}
+      out[j1+i1*aw]=C;
+    }
+    return out;
+  }
+}
+class GLRiver extends GenLayer {
+  rf(v){return v>=2?2+(v&1):v;}
+  getInts(ax,ay,aw,ah){
+    const i=ax-1,j=ay-1,k=aw+2,l=ah+2;
+    const par=this.parent.getInts(i,j,k,l);
+    const out=new Int32Array(aw*ah);
+    for(let i1=0;i1<ah;i1++) for(let j1=0;j1<aw;j1++){
+      const W=this.rf(par[j1+0+(i1+1)*k]),E=this.rf(par[j1+2+(i1+1)*k]);
+      const N=this.rf(par[j1+1+(i1+0)*k]),S=this.rf(par[j1+1+(i1+2)*k]);
+      const C=this.rf(par[j1+1+(i1+1)*k]);
+      out[j1+i1*aw]=(C===W&&C===N&&C===E&&C===S)?-1:B.RIVER;
+    }
+    return out;
+  }
+}
+class GLRiverMix extends GenLayer {
+  constructor(seed,biomeLayer,riverLayer){super(seed);this.biomeLayer=biomeLayer;this.riverLayer=riverLayer;}
+  initWorldGenSeed(seed){this.biomeLayer.initWorldGenSeed(seed);this.riverLayer.initWorldGenSeed(seed);super.initWorldGenSeed(seed);}
+  getInts(ax,ay,aw,ah){
+    const biomes=this.biomeLayer.getInts(ax,ay,aw,ah);
+    const rivers=this.riverLayer.getInts(ax,ay,aw,ah);
+    const out=new Int32Array(aw*ah);
+    for(let i=0;i<aw*ah;i++){
+      if(biomes[i]!==B.OCEAN&&biomes[i]!==B.DEEP_OCEAN){
+        out[i]=rivers[i]===B.RIVER?(biomes[i]===B.ICE_PLAINS?B.FROZEN_RIVER:(biomes[i]!==B.MUSHROOM_ISLAND&&biomes[i]!==B.MUSHROOM_ISLAND_SHORE?B.RIVER&255:B.MUSHROOM_ISLAND_SHORE)):biomes[i];
+      } else out[i]=biomes[i];
+    }
+    return out;
+  }
+}
+class GLVoronoiZoom extends GenLayer {
+  getInts(ax,ay,aw,ah){
+    const ox=ax-2,oy=ay-2;
+    const pi=ox>>2,pj=oy>>2,pk=(ow>>2)+2,pl=(oh>>2)+2;
+    const ow2=aw,oh2=ah;
+    const pk2=(ow2>>2)+2,pl2=(oh2>>2)+2;
+    const par=this.parent.getInts(pi,pj,pk2,pl2);
+    const tw=(pk2-1)<<2,th=(pl2-1)<<2;
+    const tmp=new Int32Array(tw*th);
+    for(let k1=0;k1<pl2-1;k1++){
+      let l1=0,i2=par[l1+(k1+0)*pk2];
+      for(let j2=par[l1+(k1+1)*pk2];l1<pk2-1;l1++){
+        const D=3.6;
+        this.initChunkSeed((l1+pi)<<2,(k1+pj)<<2);
+        const d1=(this.nextInt(1024)/1024-.5)*D,d2=(this.nextInt(1024)/1024-.5)*D;
+        this.initChunkSeed((l1+pi+1)<<2,(k1+pj)<<2);
+        const d3=(this.nextInt(1024)/1024-.5)*D+4,d4=(this.nextInt(1024)/1024-.5)*D;
+        this.initChunkSeed((l1+pi)<<2,(k1+pj+1)<<2);
+        const d5=(this.nextInt(1024)/1024-.5)*D,d6=(this.nextInt(1024)/1024-.5)*D+4;
+        this.initChunkSeed((l1+pi+1)<<2,(k1+pj+1)<<2);
+        const d7=(this.nextInt(1024)/1024-.5)*D+4,d8=(this.nextInt(1024)/1024-.5)*D+4;
+        const k2=par[l1+1+(k1+0)*pk2]&255,l2=par[l1+1+(k1+1)*pk2]&255;
+        for(let i3=0;i3<4;i3++){
+          let j3=((k1<<2)+i3)*tw+(l1<<2);
+          for(let k3=0;k3<4;k3++){
+            const a=(i3-d2)**2+(k3-d1)**2,b=(i3-d4)**2+(k3-d3)**2,c=(i3-d6)**2+(k3-d5)**2,d=(i3-d8)**2+(k3-d7)**2;
+            if(a<b&&a<c&&a<d)tmp[j3++]=i2&255;
+            else if(b<a&&b<c&&b<d)tmp[j3++]=k2;
+            else if(c<a&&c<b&&c<d)tmp[j3++]=j2&255;
+            else tmp[j3++]=l2;
+          }
+        }
+        i2=k2; j2=l2;
+      }
+    }
+    const out=new Int32Array(ow2*oh2);
+    for(let j3=0;j3<oh2;j3++) for(let k3=0;k3<ow2;k3++) out[k3+j3*ow2]=tmp[(k3+(ox&3))+(j3+(oy&3))*tw];
+    return out;
+  }
+}
 
-  if (decision.time_split) state.timeSplit = decision.time_split;
-  state.health = Math.min(100, Math.max(0, state.health + (Number(decision.health_change)||0)));
-  state.stress = Math.min(100, Math.max(0, state.stress + (Number(decision.stress_change)||0)));
+// Build pipeline (từ GenLayer.initializeAllBiomeGenerators)
+function buildBiomePipeline(seed) {
+  let g=new GLIsland(1n);
+  const fz=new GLFuzzyZoom(2000n); fz.parent=g; g=fz;
+  const ai1=new GLAddIsland(1n); ai1.parent=g; g=ai1;
+  const z1=new GLZoom(2001n); z1.parent=g; g=z1;
+  const ai2=new GLAddIsland(2n); ai2.parent=g; g=ai2;
+  const ai3=new GLAddIsland(50n); ai3.parent=g; g=ai3;
+  const ai4=new GLAddIsland(70n); ai4.parent=g; g=ai4;
+  const ro=new GLRemoveTooMuchOcean(2n); ro.parent=g; g=ro;
+  const sn=new GLAddSnow(2n); sn.parent=g; g=sn;
+  const ai5=new GLAddIsland(3n); ai5.parent=g; g=ai5;
+  const ew=new GLEdge(2n,g,'COOL_WARM'); g=ew;
+  const eh=new GLEdge(2n,g,'HEAT_ICE'); g=eh;
+  const es=new GLEdge(3n,g,'SPECIAL'); g=es;
+  const z2=new GLZoom(2002n); z2.parent=g; g=z2;
+  const z3=new GLZoom(2003n); z3.parent=g; g=z3;
+  const ai6=new GLAddIsland(4n); ai6.parent=g; g=ai6;
+  const mi=new GLAddMushroomIsland(5n); mi.parent=g; g=mi;
+  const do2=new GLDeepOcean(4n); do2.parent=g; g=do2;
+  const base=GLZoom.magnify(1000n,g,0);
+  const ri=new GLRiverInit(100n); ri.parent=GLZoom.magnify(1000n,base,0); 
+  const bio=new GLBiome(200n,base);
+  const bio2=GLZoom.magnify(1000n,bio,2);
+  const be=new GLShore(1000n); be.parent=bio2;
+  let hills=new GLHills(1000n,be,GLZoom.magnify(1000n,ri,2));
+  const rb=new GLRareBiome(1001n); rb.parent=hills; hills=rb;
+  for(let k=0;k<4;k++){
+    const zk=new GLZoom(BigInt(1000+k)); zk.parent=hills; hills=zk;
+    if(k===0){const ai7=new GLAddIsland(3n);ai7.parent=hills;hills=ai7;}
+    if(k===1){const sh=new GLShore(1000n);sh.parent=hills;hills=sh;}
+  }
+  const sm1=new GLSmooth(1000n); sm1.parent=hills;
+  const rv=new GLRiver(1n); rv.parent=GLZoom.magnify(1000n,ri,4);
+  const rsm=new GLSmooth(1000n); rsm.parent=rv;
+  const rmix=new GLRiverMix(100n,sm1,rsm);
+  rmix.initWorldGenSeed(seed);
+  return rmix;
+}
 
-  const marketNote = `Thị trường: ${state.marketTrend>0?'+':''}${state.marketTrend}% | Lạm phát: ${state.inflation}% | Lương/năm: ${fmt(state.salary)} VNĐ`;
-  logEntry(
-    decision.narrative || "Không có sự kiện đặc biệt năm nay.",
-    { action: decision.action, salary_tier: decision.salary_tier, reason: decision.reason || '' },
-    `${extra ? extra + ' | ' : ''}${forcedCollectionNote ? forcedCollectionNote + ' | ' : ''}${taxNote ? taxNote + ' | ' : ''}${livingNote ? livingNote + ' | ' : ''}${marketNote}`
+// ═══════════════════════════════════════════════════════
+//  ORE GENERATION – port of WorldGenMinable + BiomeDecorator
+// ═══════════════════════════════════════════════════════
+const ORE_CFG = {
+  diamond:  {color:'#5de8ff',count:1,  size:8,  minY:0,  maxY:16},
+  gold:     {color:'#ffd700',count:2,  size:9,  minY:0,  maxY:32},
+  iron:     {color:'#d4956a',count:20, size:9,  minY:0,  maxY:64},
+  coal:     {color:'#555',   count:20, size:17, minY:0,  maxY:128},
+  redstone: {color:'#ff3030',count:8,  size:8,  minY:0,  maxY:16},
+  lapis:    {color:'#3a5fff',count:1,  size:7,  minY:0,  maxY:32, centerY:16, spread:16},
+  emerald:  {color:'#50ff80',count:1,  size:1,  minY:0,  maxY:32, biomeOnly:'extreme_hills'},
+};
+
+// Generate ore positions for a chunk (port of BiomeDecorator.decorate + WorldGenMinable.generate)
+function genOresInChunk(worldSeed, cx, cz, oreType, yLevel) {
+  const cfg = ORE_CFG[oreType];
+  if (!cfg) return [];
+  const seed = BigInt.asIntN(64,
+    BigInt(worldSeed) ^ (BigInt(cx) * 341873128712n) ^ (BigInt(cz) * 132897987541n)
   );
-
-  if (state.health < 20) {
-    if (Math.random() < 0.4) {
-      logSimple("🚨 ĐỘT QUỴ do sức khỏe quá yếu!", true);
-      endLife(); return;
+  const rnd = new JavaRandom(seed);
+  const blobs = [];
+  const count = cfg.count;
+  for (let n = 0; n < count; n++) {
+    // pick vein origin
+    const bx = cx * 16 + rnd.nextInt(16);
+    let by;
+    if (cfg.centerY !== undefined) {
+      by = rnd.nextInt(cfg.spread) + rnd.nextInt(cfg.spread) - cfg.spread + cfg.centerY;
     } else {
-      logSimple("⚠️ Sức khỏe nguy hiểm! Cần nghỉ ngơi ngay.", true);
+      by = rnd.nextInt(cfg.maxY - cfg.minY) + cfg.minY;
+    }
+    const bz = cz * 16 + rnd.nextInt(16);
+    if (yLevel !== undefined && Math.abs(by - yLevel) > 4) continue;
+    blobs.push({x: bx, y: by, z: bz});
+  }
+  return blobs;
+}
+
+// ═══════════════════════════════════════════════════════
+//  CAVE DETECTION – port of MapGenCaves.recursiveGenerate
+//  Returns true if a chunk has cave at this position
+// ═══════════════════════════════════════════════════════
+function hasCaveInChunk(worldSeed, cx, cz) {
+  const seed = BigInt.asIntN(64,
+    (BigInt(worldSeed) * 341873128712n + BigInt(cx)) ^ (BigInt(worldSeed) * 132897987541n + BigInt(cz))
+  );
+  const rnd = new JavaRandom(seed);
+  const i = rnd.nextInt(rnd.nextInt(rnd.nextInt(15) + 1) + 1);
+  if (rnd.nextInt(7) !== 0) return false;
+  return i > 0;
+}
+
+// ═══════════════════════════════════════════════════════
+//  STRUCTURE GENERATION (1.12 spacing/separation)
+// ═══════════════════════════════════════════════════════
+const STRUCTURES = {
+  village:         {color:'#fbbf24',emoji:'🏘️',label:'Village',         spacing:32, separation:8,  count:10},
+  stronghold:      {color:'#a78bfa',emoji:'💀',label:'Stronghold',       spacing:80, separation:24, count:3},
+  desert_temple:   {color:'#f97316',emoji:'🏛️',label:'Desert Temple',   spacing:32, separation:8,  count:8},
+  witch_hut:       {color:'#22d3ee',emoji:'🧙',label:'Witch Hut',        spacing:32, separation:8,  count:6},
+  ocean_monument:  {color:'#38bdf8',emoji:'🏟️',label:'Ocean Monument',  spacing:32, separation:5,  count:5},
+  mineshaft:       {color:'#78716c',emoji:'⛏️',label:'Mineshaft',        spacing:4,  separation:1,  count:15},
+  jungle_temple:   {color:'#4ade80',emoji:'🌿',label:'Jungle Temple',    spacing:32, separation:8,  count:6},
+  woodland_mansion:{color:'#d97706',emoji:'🏚️',label:'Woodland Mansion', spacing:80, separation:20, count:2},
+};
+
+function genStructures(worldSeed) {
+  const list = [];
+  Object.entries(STRUCTURES).forEach(([type, cfg]) => {
+    for (let i = 0; i < cfg.count; i++) {
+      const r  = lcgFloat(worldSeed, i * 1000 + type.length * 7);
+      const r2 = lcgFloat(worldSeed, i * 1000 + type.length * 7 + 1);
+      const angle = r * Math.PI * 2;
+      const dist  = (r2 * 0.7 + 0.15) * cfg.spacing * 36;
+      const x = Math.round(Math.cos(angle) * dist);
+      const z = Math.round(Math.sin(angle) * dist);
+      list.push({type, x, z, id: i});
+    }
+  });
+  return list;
+}
+function lcgFloat(seed, salt) {
+  let h = BigInt(seed) ^ BigInt(salt) * 6364136223846793005n + 1442695040888963407n;
+  h = BigInt.asUintN(32, h ^ (h >> 17n));
+  return Number(h) / 0xFFFFFFFF;
+}
+
+// ═══════════════════════════════════════════════════════
+//  APP STATE & CANVAS
+// ═══════════════════════════════════════════════════════
+const S = {
+  seed: BigInt('-4172144997902289642'),
+  mode: 'biome',
+  offsetX: 0, offsetZ: 0,
+  scale: 0.25, // blocks/pixel
+  drag: false, dragStart: null,
+  structures: [],
+  biomeLayer: null,
+  activeStructures: new Set(Object.keys(STRUCTURES)),
+  hoveredStruct: null,
+};
+
+const canvas = document.getElementById('mc');
+const ctx = canvas.getContext('2d');
+const mapWrap = document.getElementById('mapWrap');
+
+let biomeCache = new Map();
+
+function resizeCanvas() {
+  canvas.width  = mapWrap.clientWidth;
+  canvas.height = mapWrap.clientHeight;
+  biomeCache.clear();
+  draw();
+}
+window.addEventListener('resize', resizeCanvas);
+
+function b2s(bx, bz) {
+  return { sx: canvas.width/2  + (bx - S.offsetX) / S.scale,
+           sy: canvas.height/2 + (bz - S.offsetZ) / S.scale };
+}
+function s2b(sx, sy) {
+  return { bx: (sx - canvas.width/2)  * S.scale + S.offsetX,
+           bz: (sy - canvas.height/2) * S.scale + S.offsetZ };
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW
+// ═══════════════════════════════════════════════════════
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (S.mode === 'biome') drawBiome(W, H);
+  else if (S.mode === 'ore') drawOre(W, H);
+  else if (S.mode === 'cave') drawCave(W, H);
+  else drawBiome(W, H); // structure mode uses biome as bg
+
+  drawGrid(W, H);
+  drawSpawn();
+  if (S.mode === 'structure') drawStructures(W, H);
+  if (S.mode !== 'ore') drawStructureMarkers(W, H);
+  updateScale();
+}
+
+function drawBiome(W, H) {
+  if (!S.biomeLayer) return;
+  const tileBlocks = Math.max(4, Math.pow(2, Math.round(Math.log2(S.scale * 16))));
+  const tilePx = Math.round(tileBlocks / S.scale);
+  if (tilePx < 1) return;
+  const {bx: bLeft, bz: bTop} = s2b(0, 0);
+  const gxS = Math.floor(bLeft / tileBlocks) - 1;
+  const gzS = Math.floor(bTop  / tileBlocks) - 1;
+  const cols = Math.ceil(W / tilePx) + 2;
+  const rows = Math.ceil(H / tilePx) + 2;
+  const total = cols * rows;
+  // batch fetch
+  const axArr = new Int32Array(total), ayArr = new Int32Array(total);
+  let idx = 0;
+  for (let gi = gxS; gi < gxS + cols; gi++)
+    for (let gk = gzS; gk < gzS + rows; gk++) { axArr[idx]=gi; ayArr[idx]=gk; idx++; }
+
+  idx = 0;
+  for (let gi = gxS; gi < gxS + cols; gi++) {
+    for (let gk = gzS; gk < gzS + rows; gk++) {
+      const key = `${gi},${gk},${tileBlocks}`;
+      let biomeId = biomeCache.get(key);
+      if (biomeId === undefined) {
+        const res = S.biomeLayer.getInts(gi, gk, 1, 1);
+        biomeId = res[0];
+        biomeCache.set(key, biomeId);
+      }
+      const col = BIOME_COLOR[biomeId] || '#2a3040';
+      const {sx, sy} = b2s(gi * tileBlocks, gk * tileBlocks);
+      ctx.fillStyle = col;
+      ctx.fillRect(Math.floor(sx), Math.floor(sy), tilePx + 1, tilePx + 1);
+      idx++;
     }
   }
-
-  state.age += 1;
-  updateUI();
 }
 
-function endLife() {
-  stop();
-  const totalDebt = state.debt + state.rearingDebt;
-  logSimple(`☠️ Kết thúc cuộc đời ở tuổi ${state.age}. Tài sản để lại: ${fmt(state.cash+state.savings+state.stock)} VNĐ, Nợ: ${fmt(totalDebt)} VNĐ`, true);
+function drawOre(W, H) {
+  // biome bg dimmed
+  if (S.biomeLayer) {
+    ctx.globalAlpha = 0.3;
+    drawBiome(W, H);
+    ctx.globalAlpha = 1;
+  }
+  const oreType = document.getElementById('oreSelect').value;
+  const yLevel  = parseInt(document.getElementById('ySelect').value);
+  const cfg = ORE_CFG[oreType];
+  const chunkPx = Math.round(16 / S.scale);
+  const {bx: bLeft, bz: bTop} = s2b(0, 0);
+  const cxS = Math.floor(bLeft / 16) - 1;
+  const czS = Math.floor(bTop  / 16) - 1;
+  const cols = Math.ceil(W / chunkPx) + 2;
+  const rows = Math.ceil(H / chunkPx) + 2;
 
-  const inheritance = Math.max(0, state.cash + state.savings + state.stock);
-  const nextGen = state.generation + 1;
-
-  state = freshState(nextGen, inheritance, state.debt, state.rearingDebt);
-  logSimple(`👶 Thế hệ mới #${state.generation}, thừa kế ${fmt(inheritance)} VNĐ và ${fmt(totalDebt)} VNĐ nợ.`);
-  updateUI();
-  start();
+  for (let ci = cxS; ci < cxS + cols; ci++) {
+    for (let ck = czS; ck < czS + rows; ck++) {
+      const blobs = genOresInChunk(Number(S.seed), ci, ck, oreType, yLevel);
+      blobs.forEach(b => {
+        const {sx, sy} = b2s(b.x, b.z);
+        const r = Math.max(2, Math.round(3 / S.scale));
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, 0, Math.PI*2);
+        ctx.fillStyle = cfg.color;
+        ctx.fill();
+      });
+      if (blobs.length > 0 && chunkPx > 4) {
+        const {sx, sy} = b2s(ci*16, ck*16);
+        ctx.strokeStyle = cfg.color + '33';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(sx, sy, chunkPx, chunkPx);
+      }
+    }
+  }
 }
 
-function start() {
-  if (running) return;
-  running = true;
-  el('startBtn').disabled = true;
-  el('pauseBtn').disabled = false;
-  timer = setInterval(tick, TICK_MS);
-  tick();
-}
-function stop() {
-  running = false;
-  el('startBtn').disabled = false;
-  el('pauseBtn').disabled = true;
-  clearInterval(timer);
-}
-function reset() { stop(); location.reload(); }
+function drawCave(W, H) {
+  if (S.biomeLayer) { ctx.globalAlpha = 0.25; drawBiome(W, H); ctx.globalAlpha = 1; }
+  const chunkPx = Math.round(16 / S.scale);
+  const {bx: bLeft, bz: bTop} = s2b(0, 0);
+  const cxS = Math.floor(bLeft / 16) - 1;
+  const czS = Math.floor(bTop  / 16) - 1;
+  const cols = Math.ceil(W / chunkPx) + 2;
+  const rows = Math.ceil(H / chunkPx) + 2;
 
-el('startBtn').onclick = start;
-el('pauseBtn').onclick = stop;
-el('resetBtn').onclick = reset;
+  for (let ci = cxS; ci < cxS + cols; ci++) {
+    for (let ck = czS; ck < czS + rows; ck++) {
+      const {sx, sy} = b2s(ci*16, ck*16);
+      if (hasCaveInChunk(Number(S.seed), ci, ck)) {
+        ctx.fillStyle = '#1a1a2e99';
+        ctx.fillRect(Math.floor(sx), Math.floor(sy), chunkPx+1, chunkPx+1);
+        if (chunkPx > 6) {
+          ctx.font = `${Math.min(10, chunkPx/2)}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('🕳️', sx + chunkPx/2, sy + chunkPx/2);
+        }
+      }
+    }
+  }
+}
 
-updateUI();
-logSimple("Chào mừng đến với Mô Phỏng Cuộc Đời AI. Nhấn Bắt đầu để khởi động.");
+function drawGrid(W, H) {
+  const chunkPx = 16 / S.scale;
+  if (chunkPx > 6) {
+    const {bx: bLeft, bz: bTop} = s2b(0, 0);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (let c = Math.floor(bLeft/16); c * chunkPx < W + bLeft/S.scale; c++) {
+      const {sx} = b2s(c*16, 0); if (sx<0||sx>W) continue;
+      ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke();
+    }
+    for (let c = Math.floor(bTop/16); c * chunkPx < H + bTop/S.scale; c++) {
+      const {sy} = b2s(0, c*16); if (sy<0||sy>H) continue;
+      ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy); ctx.stroke();
+    }
+  }
+  // region lines
+  const regPx = 512 / S.scale;
+  if (regPx > 10) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)'; ctx.lineWidth = 1;
+    const {bx: bLeft, bz: bTop} = s2b(0, 0);
+    for (let r = Math.floor(bLeft/512); ; r++) {
+      const {sx} = b2s(r*512, 0); if (sx > W) break;
+      ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke();
+    }
+    for (let r = Math.floor(bTop/512); ; r++) {
+      const {sy} = b2s(0, r*512); if (sy > H) break;
+      ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy); ctx.stroke();
+    }
+  }
+}
+
+function drawSpawn() {
+  const {sx, sy} = b2s(0, 0);
+  if (sx < -20 || sx > canvas.width+20 || sy < -20 || sy > canvas.height+20) return;
+  ctx.strokeStyle = '#f8717188'; ctx.lineWidth = 1.5;
+  const s = 10;
+  ctx.beginPath(); ctx.moveTo(sx-s,sy); ctx.lineTo(sx+s,sy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx,sy-s); ctx.lineTo(sx,sy+s); ctx.stroke();
+  ctx.beginPath(); ctx.arc(sx,sy,4,0,Math.PI*2); ctx.strokeStyle='#f87171'; ctx.stroke();
+}
+
+function drawStructures(W, H) {
+  S.structures.forEach(s => {
+    if (!S.activeStructures.has(s.type)) return;
+    const {sx, sy} = b2s(s.x, s.z);
+    if (sx < -20 || sx > W+20 || sy < -20 || sy > H+20) return;
+    const info = STRUCTURES[s.type];
+    const hov  = S.hoveredStruct === s;
+    const r = hov ? 9 : 7;
+    if (hov) {
+      ctx.beginPath(); ctx.arc(sx, sy, r+5, 0, Math.PI*2);
+      ctx.fillStyle = info.color + '44'; ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI*2);
+    ctx.fillStyle = info.color; ctx.fill();
+    ctx.strokeStyle = '#0d0f12'; ctx.lineWidth = 2; ctx.stroke();
+    if (S.scale < 1) {
+      ctx.font = '12px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(info.emoji, sx, sy);
+    }
+    if (S.scale < 0.3) {
+      ctx.font = '10px Inter,sans-serif'; ctx.fillStyle = '#e2e8f0';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(info.label, sx, sy + r + 3);
+    }
+  });
+}
+
+function drawStructureMarkers(W, H) {
+  // small dots for structures even in non-structure modes
+}
+
+function updateScale() {
+  const blocksPerPx = S.scale;
+  const bar = Math.round(72 * blocksPerPx / 8) * 8 || 1;
+  document.getElementById('scaleLabel').textContent = bar >= 1000 ? (bar/1000).toFixed(1)+'k blocks' : bar + ' blocks';
+}
+
+// ═══════════════════════════════════════════════════════
+//  GENERATE
+// ═══════════════════════════════════════════════════════
+async function generate() {
+  const raw = document.getElementById('seedInput').value.trim();
+  if (!raw) return;
+  const ld = document.getElementById('loading');
+  const ldtxt = document.getElementById('ldtxt');
+  ld.classList.remove('hide');
+  ldtxt.textContent = 'Đang tính toán biome…';
+  biomeCache.clear();
+
+  await new Promise(r => setTimeout(r, 30));
+
+  try { S.seed = BigInt(isNaN(Number(raw)) ? hashStr(raw) : raw); }
+  catch { S.seed = BigInt(hashStr(raw)); }
+
+  ldtxt.textContent = 'Đang xây dựng GenLayer pipeline…';
+  await new Promise(r => setTimeout(r, 20));
+
+  S.biomeLayer = buildBiomePipeline(S.seed);
+  S.structures = genStructures(S.seed);
+  S.offsetX = 0; S.offsetZ = 0;
+
+  document.getElementById('dSeed').textContent = S.seed.toString();
+  document.getElementById('statTotal').textContent = S.structures.length;
+  document.getElementById('statMode').textContent = {biome:'Biome',ore:'Ore Finder',cave:'Cave Finder',structure:'Structure'}[S.mode];
+
+  updateInfoPanel();
+  draw();
+  buildSidebar();
+  buildLegend();
+  ld.classList.add('hide');
+}
+
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return h;
+}
+
+function updateInfoPanel() {
+  const nearest = {};
+  S.structures.forEach(s => {
+    const d = Math.hypot(s.x, s.z);
+    if (!nearest[s.type] || d < nearest[s.type].dist) nearest[s.type] = {...s, dist: d};
+  });
+  const nl = document.getElementById('nearList');
+  nl.innerHTML = '';
+  Object.values(nearest).slice(0, 6).forEach(s => {
+    const info = STRUCTURES[s.type];
+    const row = document.createElement('div');
+    row.className = 'irow';
+    row.onclick = () => { S.offsetX = s.x; S.offsetZ = s.z; draw(); };
+    row.innerHTML = `<span>${info.emoji}</span><span>${info.label}</span><span class="irow-coord">X:${s.x} Z:${s.z}</span>`;
+    nl.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  SIDEBAR
+// ═══════════════════════════════════════════════════════
+function buildSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = '';
+  if (S.mode === 'biome') {
+    sb.innerHTML = '<div class="sg">Biome Colors</div>';
+    const shown = new Set();
+    const {bx: bLeft, bz: bTop} = s2b(0, 0);
+    Object.entries(BIOME_COLOR).slice(0, 20).forEach(([id, col]) => {
+      const name = BIOME_NAME[id] || 'Unknown';
+      const row = document.createElement('div');
+      row.className = 'sitem on';
+      row.innerHTML = `<div class="sdot" style="background:${col}"></div><span>${name}</span>`;
+      sb.appendChild(row);
+    });
+  } else if (S.mode === 'ore') {
+    sb.innerHTML = '<div class="sg">Ore Types</div>';
+    Object.entries(ORE_CFG).forEach(([ore, cfg]) => {
+      const row = document.createElement('div');
+      row.className = 'sitem on';
+      row.style.cursor = 'pointer';
+      row.onclick = () => { document.getElementById('oreSelect').value = ore; draw(); };
+      const cur = document.getElementById('oreSelect').value;
+      if (ore === cur) row.style.background = '#1a2e1f';
+      row.innerHTML = `<div class="sdot" style="background:${cfg.color}"></div><span>${ore[0].toUpperCase()+ore.slice(1)}</span><span class="scnt">Y:${cfg.minY}-${cfg.maxY}</span>`;
+      sb.appendChild(row);
+    });
+  } else if (S.mode === 'cave') {
+    sb.innerHTML = `<div class="sg">Cave Info</div>
+    <div class="sitem on"><div class="sdot" style="background:#4444aa"></div><span>Cave chunk</span></div>
+    <div style="padding:8px;font-size:11px;color:var(--muted);line-height:1.5">
+      Chunk tối màu = có hang động.<br>Thuật toán: MapGenCaves<br>từ source MC 1.12.
+    </div>`;
+  } else if (S.mode === 'structure') {
+    sb.innerHTML = '<div class="sg">Structures</div>';
+    Object.entries(STRUCTURES).forEach(([type, cfg]) => {
+      const cnt = S.structures.filter(s => s.type === type).length;
+      const row = document.createElement('div');
+      row.className = 'sitem' + (S.activeStructures.has(type) ? ' on' : '');
+      row.onclick = () => { toggleStruct(type, row); };
+      row.innerHTML = `<div class="sdot" style="background:${cfg.color}"></div><span>${cfg.label}</span><span class="scnt">${cnt}</span>`;
+      sb.appendChild(row);
+    });
+  }
+}
+
+function toggleStruct(type, el) {
+  if (S.activeStructures.has(type)) S.activeStructures.delete(type);
+  else S.activeStructures.add(type);
+  el.classList.toggle('on');
+  draw();
+}
+
+// ═══════════════════════════════════════════════════════
+//  LEGEND
+// ═══════════════════════════════════════════════════════
+function buildLegend() {
+  const lg = document.getElementById('legend');
+  if (S.mode === 'biome') {
+    lg.innerHTML = '<div style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Biome Colors</div>';
+    const shown = Object.entries(BIOME_COLOR).slice(0, 12);
+    shown.forEach(([id, col]) => {
+      const row = document.createElement('div');
+      row.className = 'leg-row';
+      row.innerHTML = `<div class="leg-dot" style="background:${col}"></div><span style="font-size:11px">${BIOME_NAME[id]||'?'}</span>`;
+      lg.appendChild(row);
+    });
+  } else if (S.mode === 'ore') {
+    lg.innerHTML = '<div style="font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">Ore Legend</div>';
+    Object.entries(ORE_CFG).forEach(([ore, cfg]) => {
+      const row = document.createElement('div');
+      row.className = 'leg-row';
+      row.innerHTML = `<div class="leg-dot" style="background:${cfg.color}"></div><span style="font-size:11px">${ore[0].toUpperCase()+ore.slice(1)} (Y ${cfg.minY}–${cfg.maxY})</span>`;
+      lg.appendChild(row);
+    });
+  }
+}
+
+let legendVisible = false;
+function toggleLegend() {
+  legendVisible = !legendVisible;
+  const lg = document.getElementById('legend');
+  if (legendVisible) { lg.classList.add('vis'); buildLegend(); }
+  else lg.classList.remove('vis');
+}
+
+// ═══════════════════════════════════════════════════════
+//  MODE TABS
+// ═══════════════════════════════════════════════════════
+function setMode(mode, el) {
+  S.mode = mode;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('oreSelect').style.display = mode === 'ore' ? '' : 'none';
+  document.getElementById('ySelect').style.display   = mode === 'ore' ? '' : 'none';
+  document.getElementById('statMode').textContent = {biome:'Biome',ore:'Ore Finder',cave:'Cave Finder',structure:'Structure'}[mode];
+  biomeCache.clear();
+  buildSidebar();
+  buildLegend();
+  draw();
+}
+
+// ═══════════════════════════════════════════════════════
+//  CONTROLS
+// ═══════════════════════════════════════════════════════
+function doZoom(f) { S.scale = Math.max(0.02, Math.min(16, S.scale / f)); biomeCache.clear(); draw(); }
+function resetView() { S.offsetX = 0; S.offsetZ = 0; S.scale = 0.25; biomeCache.clear(); draw(); }
+function randomSeed() {
+  const r = BigInt(Math.floor(Math.random() * 2**32)) - BigInt(2**31);
+  document.getElementById('seedInput').value = r.toString();
+  generate();
+}
+
+// Drag
+canvas.addEventListener('mousedown', e => {
+  S.drag = true;
+  S.dragStart = {x: e.clientX, y: e.clientY, ox: S.offsetX, oz: S.offsetZ};
+  e.preventDefault();
+});
+window.addEventListener('mouseup', () => { S.drag = false; });
+window.addEventListener('mousemove', e => {
+  if (S.drag) {
+    S.offsetX = S.dragStart.ox - (e.clientX - S.dragStart.x) * S.scale;
+    S.offsetZ = S.dragStart.oz - (e.clientY - S.dragStart.y) * S.scale;
+    biomeCache.clear();
+    draw();
+  }
+  const rect = mapWrap.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const {bx, bz} = s2b(mx, my);
+  document.getElementById('cx').textContent = Math.round(bx);
+  document.getElementById('cz').textContent = Math.round(bz);
+
+  // biome at cursor
+  if (S.biomeLayer && (S.mode === 'biome' || S.mode === 'structure')) {
+    const bxr = Math.round(bx), bzr = Math.round(bz);
+    const res = S.biomeLayer.getInts(bxr, bzr, 1, 1);
+    const bname = BIOME_NAME[res[0]] || 'Unknown';
+    document.getElementById('biomeAt').textContent = bname;
+    document.getElementById('hoverBiome').textContent = bname;
+  }
+
+  // tooltip for structures
+  const tt = document.getElementById('tooltip');
+  let found = null;
+  if (S.mode === 'structure') {
+    for (const s of S.structures) {
+      if (!S.activeStructures.has(s.type)) continue;
+      const {sx, sy} = b2s(s.x, s.z);
+      if (Math.hypot(mx - sx, my - sy) < 10) { found = s; break; }
+    }
+  }
+  S.hoveredStruct = found;
+  if (found) {
+    const info = STRUCTURES[found.type];
+    document.getElementById('ttN').textContent = info.emoji + ' ' + info.label;
+    document.getElementById('ttC').textContent = `X: ${found.x}  Z: ${found.z}`;
+    tt.style.left = (mx + 14) + 'px'; tt.style.top = (my - 10) + 'px';
+    tt.classList.add('vis');
+    canvas.style.cursor = 'pointer';
+  } else {
+    tt.classList.remove('vis');
+    canvas.style.cursor = S.drag ? 'grabbing' : 'grab';
+  }
+  if (!S.drag && S.mode === 'structure') draw();
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  S.scale = Math.max(0.02, Math.min(16, S.scale * (e.deltaY > 0 ? 1.15 : 0.87)));
+  biomeCache.clear(); draw();
+}, { passive: false });
+
+// Touch
+let lastT = null;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) lastT = {x:e.touches[0].clientX,y:e.touches[0].clientY,ox:S.offsetX,oz:S.offsetZ};
+}, {passive:true});
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 1 && lastT) {
+    S.offsetX = lastT.ox - (e.touches[0].clientX - lastT.x) * S.scale;
+    S.offsetZ = lastT.oz - (e.touches[0].clientY - lastT.y) * S.scale;
+    biomeCache.clear(); draw();
+  }
+}, {passive:false});
+
+// Enter key
+document.getElementById('seedInput').addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
+
+// ═══════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════
+resizeCanvas();
+generate();
 </script>
 </body>
 </html>
