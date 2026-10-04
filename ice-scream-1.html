@@ -13,7 +13,7 @@ canvas{display:block;position:fixed;inset:0}
 #ni{display:block;height:100%;width:0;background:#e8b040}
 #pr{bottom:60px;width:100%;text-align:center;font-size:16px;text-shadow:0 0 4px #000}
 #msg{top:40%;width:100%;text-align:center;font-size:17px;text-shadow:0 0 6px #000;padding:0 20px}
-#fade{inset:0;background:#000;opacity:0;transition:opacity 1.2s;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;z-index:5}
+#fade{inset:0;background:#000;opacity:0;transition:opacity 1.2s;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;font-size:30px;z-index:5}
 #ov{position:fixed;inset:0;z-index:9;background:#000e;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;gap:10px}
 #ov h1{font-size:44px;color:#d33;margin:0;letter-spacing:4px}#ov h3{margin:0}
 button{font:inherit;font-size:18px;padding:10px 24px;background:#400;color:#fff;border:1px solid #a33;cursor:pointer}
@@ -38,31 +38,39 @@ let ren;try{ren=new T.WebGLRenderer({antialias:true})}catch(e){fail('WebGL is un
 const sv=v=>{try{localStorage.setItem('iscream1',v)}catch(e){}},ld=()=>{try{return+localStorage.getItem('iscream1')||0}catch(e){return 0}};
 ren.setPixelRatio(Math.min(devicePixelRatio||1,1.5));ren.setSize(innerWidth,innerHeight);
 const cd=ren.domElement;document.body.prepend(cd);
-const scene=new T.Scene(),cam=new T.PerspectiveCamera(72,innerWidth/innerHeight,.05,70);cam.rotation.order='YXZ';scene.add(cam);
+const scene=new T.Scene(),cam=new T.PerspectiveCamera(72,innerWidth/innerHeight,.05,80);cam.rotation.order='YXZ';scene.add(cam);
 addEventListener('resize',()=>{ren.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
 const fl=new T.SpotLight(0xfff0cc,0,26,.5,.6,1.2);fl.target.position.set(0,0,-1);cam.add(fl,fl.target);
 cam.add(new T.PointLight(0x665544,.6,6));
-const M=(c,e)=>new T.MeshLambertMaterial({color:c,emissive:e||0});
+const M=(c,e)=>new T.MeshLambertMaterial({color:c,emissive:e||0}),MB=c=>new T.MeshBasicMaterial({color:c});
 let Lg=null;
 const B=(w,h,d,m,x,y,z)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);Lg.add(o);return o};
-function makeRod(){const g=new T.Group(),wh=new T.MeshLambertMaterial({color:0xeeeeee,emissive:0x444444}),dk=M(0x2a1f38),rd=new T.MeshBasicMaterial({color:0xcc1122}),bk=new T.MeshBasicMaterial({color:0});
+/* Rod: ice-cream head with a bite taken out, purple nose, red cheeks, blue apron */
+function makeRod(){const g=new T.Group(),wh=M(0xf2f2f2,0x555555),ap=M(0x1f3a8a,0x0a1230),hd=M(0xe6d3a0,0x4a3f28),ins=M(0x5a4630),pn=M(0xdddddd,0x333333);
 const a=(geo,m,x,y,z,rz)=>{const o=new T.Mesh(geo,m);o.position.set(x,y,z);o.rotation.z=rz||0;g.add(o);return o};
-a(new T.BoxGeometry(.9,1.3,.5),dk,0,1.1,0);a(new T.BoxGeometry(.3,.9,.3),dk,-.2,.45,0);a(new T.BoxGeometry(.3,.9,.3),dk,.2,.45,0);
-a(new T.BoxGeometry(.18,.9,.18),dk,-.58,1.2,.1);a(new T.BoxGeometry(.18,.9,.18),dk,.58,1.2,.1);
-a(new T.SphereGeometry(.34,12,10),wh,0,1.95,0).scale.set(.9,1.1,.9);
-a(new T.BoxGeometry(.12,.8,.06),wh,-.14,2.6,0,.12);a(new T.BoxGeometry(.12,.8,.06),wh,.14,2.6,0,-.12);
-a(new T.SphereGeometry(.06,6,6),bk,-.12,2,.28);a(new T.SphereGeometry(.06,6,6),bk,.12,2,.28);
-a(new T.TorusGeometry(.14,.025,6,14,Math.PI),rd,0,1.86,.3,Math.PI).scale.x=1.5;
+a(new T.BoxGeometry(.9,1.3,.5),wh,0,1.1,0);a(new T.BoxGeometry(.7,1.15,.08),ap,0,.98,.28);
+a(new T.BoxGeometry(.14,.14,.02),MB(0x8a1020),-.1,.9,.33);a(new T.BoxGeometry(.2,.1,.02),MB(0x8a1020),.12,.7,.33);
+a(new T.BoxGeometry(.3,.9,.3),pn,-.2,.45,0);a(new T.BoxGeometry(.3,.9,.3),pn,.2,.45,0);
+a(new T.BoxGeometry(.18,.9,.18),wh,-.58,1.2,.1);a(new T.BoxGeometry(.18,.9,.18),wh,.58,1.2,.1);
+a(new T.SphereGeometry(.36,12,10),hd,0,1.95,0).scale.set(.85,1.2,.8);
+a(new T.BoxGeometry(.2,.22,.2),ins,.2,2.36,.04,.5);a(new T.BoxGeometry(.12,.5,.06),wh,-.05,2.55,0,.15);
+a(new T.SphereGeometry(.09,8,8),MB(0x35288a),0,1.9,.3);
+a(new T.SphereGeometry(.07,6,6),MB(0xcc2233),-.19,1.84,.26);a(new T.SphereGeometry(.07,6,6),MB(0xcc2233),.19,1.84,.26);
+a(new T.SphereGeometry(.05,6,6),MB(0),-.12,2.05,.28);a(new T.SphereGeometry(.05,6,6),MB(0),.12,2.05,.28);
+a(new T.SphereGeometry(.12,8,8),MB(0),0,1.7,.27).scale.set(1,1.4,.5);
+a(new T.SphereGeometry(.06,6,6),MB(0xaa1122),0,1.64,.3);a(new T.BoxGeometry(.3,.1,.1),MB(0xdd1122),0,1.52,.26);
 g.scale.setScalar(.9);g.visible=false;return g}
 const P={x:0,z:0,yaw:0,pitch:0,h:1.6,hid:null,crouch:false,noise:0},S={lvl:1,inv:{},keys:0,taken:0,play:false,run:false,ch:false},K={};
 let G,W,H,I=[],lamps=[],wins=[],fc=[],cur=null,charlie=null,jv=0,AC=null,mv=[0,0],mt=0,lastSt=-9,js=0,tk=0;
 const clk=new T.Clock(),R={m:makeRod(),on:false,s:'patrol',path:[],x:0,z:0,lost:0,rt:0,st:0,last:null,see:false};scene.add(R.m);
 const ITL=[['fl','Flashlight','🔦'],['key','House key','🗝️'],['rem','Garage remote','📡'],['toy',"Charlie's toy",'🧸'],['bar','Crowbar','🔧']];
+const IT2=[['dkey','Diner key','🗝️'],['wr','Wrench','🔩'],['fuel','Fuel can','⛽'],['card','Van keycard','💳']];
 const say=(t,s)=>{$('msg').textContent=t;mt=s||3.2};
 function hud(){
-$('inv').innerHTML=S.lvl==1?ITL.map(i=>`<span class="${S.inv[i[0]]?'on':''}" title="${i[1]}">${i[2]}</span>`).join(''):`<span class="${S.keys?'on':''}">🔑×${S.keys}</span><span class="${S.inv.bat?'on':''}">🔋</span><span class="${S.freed?'on':''}">🧒</span>`;
+$('inv').innerHTML=S.lvl==1?ITL.map(i=>`<span class="${S.inv[i[0]]?'on':''}" title="${i[1]}">${i[2]}</span>`).join(''):S.lvl==2?IT2.map(i=>`<span class="${S.inv[i[0]]?'on':''}" title="${i[1]}">${i[2]}</span>`).join(''):`<span class="${S.keys?'on':''}">🔑×${S.keys}</span><span class="${S.inv.bat?'on':''}">🔋</span><span class="${S.freed?'on':''}">🧒</span>`;
 let o;
 if(S.lvl==1){o=S.inv.bar&&(S.inv.key||S.inv.rem)?'Sneak out: front door (key) or garage door (remote).':'Find clues & gear: '+ITL.filter(i=>!S.inv[i[0]]).map(i=>i[1]).join(', ');if(R.on)o='ROD IS INSIDE. '+o}
+else if(S.lvl==2){const m=IT2.slice(0,3).filter(i=>!S.inv[i[0]]).map(i=>i[1]);o=S.inv.card?'Open Rod\'s van on the street.':m.length?'Find: '+m.join(', ')+'. The go-kart needs the wrench and fuel.':'Fix the go-kart in the warehouse.'}
 else o=S.freed?'Charlie is free! Reach the rear door'+(S.inv.bat?'.':' (it needs the battery).'):S.keys<4?`Find 4 keys (${S.keys}/4)${S.inv.bat?'':' and the battery'}.`:'Free Charlie at the end of the top corridor.';
 $('obj').textContent=o}
 /* ---------- audio ---------- */
@@ -85,38 +93,44 @@ for(let i=0;i<q.length;i++){const c0=q[i];if(c0==t)break;const x=c0%W,y=c0/W|0;
 for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=W||ny>=H)continue;const n=ny*W+nx;if(prev[n]!=-2||G[n])continue;prev[n]=c0;q.push(n)}}
 if(prev[t]==-2)return[];const p=[];for(let n=t;n!=-1;n=prev[n])p.push([n%W,n/W|0]);return p.reverse().slice(1)}
 /* ---------- level building ---------- */
-function lamp(x,z,c,i,d,f){const l=new T.PointLight(c,i,d,1.5);l.position.set(x,2.4,z);Lg.add(l);const b=new T.Mesh(new T.SphereGeometry(.12,6,6),new T.MeshBasicMaterial({color:c}));b.position.copy(l.position);Lg.add(b);lamps.push({l,i,f,t:0,k:1})}
-function item(id,name,col,x,y,z,lab,msg){const m=new T.Mesh(new T.OctahedronGeometry(.16),new T.MeshBasicMaterial({color:col}));m.position.set(x,y,z);Lg.add(m);const o={x,z,y,m,r:2.2,label:lab||'Take '+name,f:()=>take(o,id,name,msg)};I.push(o)}
+function lamp(x,z,c,i,d,f){const l=new T.PointLight(c,i,d,1.5);l.position.set(x,2.4,z);Lg.add(l);const b=new T.Mesh(new T.SphereGeometry(.12,6,6),MB(c));b.position.copy(l.position);Lg.add(b);lamps.push({l,i,f,t:0,k:1})}
+function item(id,name,col,x,y,z,lab,msg){const m=new T.Mesh(new T.OctahedronGeometry(.16),MB(col));m.position.set(x,y,z);Lg.add(m);const o={x,z,y,m,r:2.2,label:lab||'Take '+name,f:()=>take(o,id,name,msg)};I.push(o)}
 const hideSpot=(x,z)=>I.push({x,z,r:1.8,label:()=>P.hid?'Come out':'Hide',f:hideT});
 function van(x,z){const b=M(0xdcd4c4,0x4a4440),p=M(0xff6f91,0x772244);B(6,2.2,2.6,b,x,1.5,z);B(1.8,1.5,2.6,b,x+3.8,1.1,z);B(6.1,.35,2.7,p,x,1.2,z);B(1.8,.8,.3,p,x,3,z);
 for(const wx of[-1.8,2.4])for(const wz of[-1.3,1.3]){const w=new T.Mesh(new T.CylinderGeometry(.5,.5,.4,10),M(0x111111));w.rotation.x=Math.PI/2;w.position.set(x+wx,.5,z+wz);Lg.add(w)}}
 function take(o,id,name,msg){o.gone=true;Lg.remove(o.m);if(id=='k')S.keys++;else S.inv[id]=1;if(id=='fl')fl.intensity=1.8;say(msg||'Picked up: '+name);if(S.lvl==1&&++S.taken==3)S.scare={t:0,p:0};hud()}
+function go(txt,n){S.go=true;const f=$('fade');f.style.transition='opacity 1.2s';f.textContent=txt;f.style.opacity=1;setTimeout(()=>{build(n);f.textContent='';f.style.opacity=0},2600)}
 function build(n){
 if(Lg)scene.remove(Lg);Lg=new T.Group();scene.add(Lg);I=[];lamps=[];wins=[];charlie=null;cur=null;
 Object.assign(S,{lvl:n,inv:{},keys:0,taken:0,freed:false,scare:null,over:false,end:false,go:false,ch:false});
 Object.assign(P,{hid:null,crouch:false,noise:0,pitch:0,h:1.6});
 Object.assign(R,{on:false,s:'patrol',path:[],lost:0,last:null,rt:0,see:false});R.m.visible=false;
-const l1=n==1,ch=l1?3:2.8,bg=l1?0x07050a:0x040a10;
-scene.fog=new T.FogExp2(bg,l1?.07:.1);scene.background=new T.Color(bg);fl.intensity=l1?0:1.8;
-if(l1){mk(24,14);[[1,1,5,3],[3,4,3,4],[1,5,19,6],[4,7,4,7],[1,8,8,12],[12,7,12,7],[10,8,14,12],[17,4,17,4],[16,1,18,3],[19,7,19,7],[16,8,22,12]].forEach(c=>cv(...c));
+const ind=n!=2,ch=[0,3,4,2.8][n],bg=[0,0x07050a,0x050816,0x040a10][n];let DR=[];
+scene.fog=new T.FogExp2(bg,[0,.07,.05,.1][n]);scene.background=new T.Color(bg);fl.intensity=n==1?0:1.8;
+if(n==1){mk(24,14);[[1,1,5,3],[3,4,3,4],[1,5,19,6],[4,7,4,7],[1,8,8,12],[12,7,12,7],[10,8,14,12],[17,4,17,4],[16,1,18,3],[19,7,19,7],[16,8,22,12]].forEach(c=>cv(...c));
 G[3]=3;G[13*24+4]=3;G[13*24+12]=3;G[5*24]=3;G[6*24]=4;G[10*24+23]=4}
+else if(n==2){mk(26,16);[[1,1,14,9],[16,1,24,6],[1,11,12,14],[6,10,6,10],[15,8,24,14]].forEach(c=>cv(...c));DR=[[15,3,'dkey','diner']];G[3*26+15]=5}
 else{mk(21,9);for(const y of[1,3,5,7])cv(1,y,19,y);[[19,2],[1,4],[19,6],[5,2],[11,2],[8,4],[15,4],[5,6],[11,6]].forEach(c=>cv(c[0],c[1],c[0],c[1]));G[7*21]=4}
 fc=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(!G[y*W+x])fc.push([x,y]);
-const wm=M(l1?0x7a6652:0x5d6872),dm=M(l1?0x4a2c18:0x777f88);let c=0;for(const v of G)if(v==1)c++;
+const wm=M([0,0x7a6652,0x30343f,0x5d6872][n]),dm=M([0,0x4a2c18,0x4a2c18,0x777f88][n]);let c=0;for(const v of G)if(v==1)c++;
 const im=new T.InstancedMesh(new T.BoxGeometry(CS,ch,CS),wm,c),o=new T.Object3D();let k=0;
 for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=G[y*W+x],X=ctr(x),Z=ctr(y);
 if(v==1){o.position.set(X,ch/2,Z);o.updateMatrix();im.setMatrixAt(k++,o.matrix)}
 else if(v==3){B(CS,.9,CS,wm,X,.45,Z);B(CS,ch-2.3,CS,wm,X,ch-(ch-2.3)/2,Z);
 const gl=new T.Mesh(new T.PlaneGeometry(CS,1.4),new T.MeshBasicMaterial({color:0x2a3a66,transparent:true,opacity:.3,depthWrite:false,side:T.DoubleSide}));gl.position.set(X,1.6,Z);if(x==0)gl.rotation.y=Math.PI/2;Lg.add(gl);
 wins.push({x:X,z:Z,ox:x==0?-1:0,oz:y==0?-1:y==H-1?1:0})}
-else if(v==4)B(CS,ch-.2,CS,dm,X,(ch-.2)/2,Z)}
+else if(v==4)B(CS,ch-.2,CS,dm,X,(ch-.2)/2,Z);
+else if(v==5){const d=DR.find(q=>q[0]==x&&q[1]==y),m=B(CS,ch-.2,CS,dm,X,(ch-.2)/2,Z),q={x:X,z:Z,r:2.5,label:'Open '+d[3]+' door',f:()=>{if(!S.inv[d[2]]){say('Locked. You need the '+d[3]+' key.');return}G[y*W+x]=0;Lg.remove(m);q.gone=true;fc.push([x,y]);say('Unlocked.')}};I.push(q)}}
 im.frustumCulled=false;im.instanceMatrix.needsUpdate=true;Lg.add(im);
-B(W*CS,.2,H*CS,M(l1?0x45301f:0x343a42),W,-.1,H);B(W*CS,.2,H*CS,M(l1?0x2b2420:0x2a3036),W,ch+.1,H);B(260,.2,260,M(0x0a120a),W,-.2,H);
-Lg.add(new T.AmbientLight(l1?0x44332a:0x1d2c3c,1));
-if(l1){
+B(W*CS,.2,H*CS,M([0,0x45301f,0x2c2c24,0x343a42][n]),W,-.1,H);if(ind)B(W*CS,.2,H*CS,M([0,0x2b2420,0,0x2a3036][n]),W,ch+.1,H);B(260,.2,260,M(0x0a120a),W,-.2,H);
+Lg.add(new T.AmbientLight([0,0x44332a,0x2a3652,0x1d2c3c][n],1));
+if(n==1){
 lamp(7,5,0xffaa55,1.1,14);lamp(19,11,0xffcc88,.9,12,1);lamp(9,21,0xff9944,1,14);lamp(25,21,0xffddaa,1,13);lamp(39,21,0xaaccff,.9,14);
 const wd=M(0x5a3d28);
 B(2.2,.6,3.8,M(0x6a3a3a),3.4,.3,5.8);hideSpot(3.4,5.8);B(1,.7,1,wd,11,.35,3);
+B(2.2,2.6,.9,M(0x8a7a3a),5,1.3,2.6);hideSpot(5,3.3);
+B(2,.1,.9,wd,8.6,.75,2.5);B(.1,.75,.8,wd,7.7,.38,2.5);B(.1,.75,.8,wd,9.5,.38,2.5);B(.7,.55,.5,M(0x998877),8.6,1.1,2.5);B(.5,.4,.05,MB(0x33ff88),8.6,1.12,2.26);
+B(.9,1.2,.05,MB(0xaa2222),2.2,1.9,6.5).rotation.y=Math.PI/2;B(1,2.2,.2,M(0xaa5a22),5.9,1.3,2.1);B(1,2.2,.2,M(0xaa5a22),8.1,1.3,2.1);
 B(1.8,2.4,.9,wd,15,1.2,10.5);hideSpot(15,10.8);
 B(4,.9,1.4,M(0x3b4a5a),10,.45,19.8);B(1.6,.5,1.6,wd,13,.25,22);B(1.8,2.4,.9,wd,3,1.2,25.3);hideSpot(3,24.9);
 B(8,1,1.2,M(0x8a8a80),25,.5,16.7);B(1.5,.8,3,wd,45,.4,21);B(1.8,2,.9,wd,41,1,25.5);hideSpot(41,25.1);
@@ -124,21 +138,41 @@ B(4.4,.05,2.4,M(0),35,.03,4);van(7,-8);
 item('fl','Flashlight',0xffee66,11,.95,3,0,'Flashlight. Charlie borrowed it last week...');
 item('key','House key',0xffcc22,24,1.2,17.4,'Search drawer','The house key was in the kitchen drawer.');
 item('rem','Garage remote',0x66ff99,45,.95,21);
-item('toy',"Charlie's toy",0xff5577,13,.7,22,0,"Charlie's toy rabbit. He never goes anywhere without it.");
+item('toy',"Charlie's toy",0xff5577,13,.7,22,0,"Charlie Owens' toy rabbit. He never goes anywhere without it.");
 item('bar','Crowbar',0x99aabb,35,.3,6,0,'A crowbar. Heavy. Good for prying open a van.');
 I.push({x:1,z:13,r:2.7,label:'Unlock front door',f:()=>out('key')});
 I.push({x:47,z:21,r:2.7,label:'Open garage door',f:()=>out('rem')});
 P.x=7;P.z=5;P.yaw=0;
-say("Charlie's gone. That's Rod's van outside your window. Find something, anything.",5);
-}else{
+say("J. Brown. Rod's van is right outside your window and Charlie is gone. Get out of your room and help him!",6)}
+else if(n==2){
+const wd=M(0x5a4a35),yl=M(0xc8a030),bl=M(0x7a96b0),or=M(0xc0502a);
+B(3,3.6,3,wd,17,1.8,7);B(3.4,.4,3.4,yl,17,3.8,7);B(1.2,.2,5,bl,17,1.7,12).rotation.x=.5;B(1.5,1.5,.2,MB(0x99aacc),17,2.4,5.4);hideSpot(17,9);
+B(.8,9,.8,yl,25,4.5,3);B(9,.6,.6,yl,21,9,3);B(1.4,1.4,2.6,M(0x44505a),17,.7,3);
+B(4.4,.3,3,M(0x8a7a50),7,.15,15);B(.2,3,.2,wd,23,1.5,16);B(.2,3,.2,wd,27,1.5,16);B(4.2,.2,.2,wd,25,3,16);
+B(3,2,2.4,M(0x3a4a3a),5,1,5);hideSpot(5,6.6);
+lamp(15,5,0xaabbff,.9,16);lamp(41,8,0xffcc88,1.1,14);lamp(14,27,0xaaccff,.9,14);lamp(40,22,0xffddaa,1,16);
+B(4,1.1,1.2,or,37,.55,4.2);B(4,1.1,1.2,or,44,.55,4.2);hideSpot(40.5,4.8);B(1.6,.8,1.6,M(0xdddddd),37,.4,7.5);B(1.6,.8,1.6,M(0xdddddd),44,.4,7.5);B(8,1.1,1.2,M(0x8a8a80),41,.55,12);
+B(3.6,.05,2.4,MB(0x1a3a2a),48,.03,5);
+B(2.6,.5,1.4,M(0xcc2222),10,.5,27);B(.3,.9,1.9,M(0xcc2222),8.6,1,27);B(.5,.5,.2,M(0x111111),11,.3,26.2);B(.5,.5,.2,M(0x111111),11,.3,27.8);B(.5,.5,.2,M(0x111111),9,.3,26.2);B(.5,.5,.2,M(0x111111),9,.3,27.8);
+B(2.2,2.2,2.2,M(0x334455),22,1.1,29);hideSpot(22,27.6);B(2,2,2,M(0x334455),5,1,24.5);
+van(38,22);
+item('dkey','Diner key',0xffcc22,7,.6,15,0,'A rusty diner key, half buried in the sandbox.');
+item('wr','Wrench',0x99aabb,25,.8,6,0,'A wrench under the crane.');
+item('fuel','Fuel can',0xdd3322,46,1.4,11,0,'A fuel can behind the diner counter.');
+I.push({x:10,z:27,r:2.8,label:'Fix go-kart',f:q=>{if(!S.inv.wr||!S.inv.fuel){say('The go-kart is dead. It needs a wrench and fuel.');return}S.inv.card=1;q.gone=true;say('The engine coughs alive. A van keycard falls out of the glovebox.',4);hud()}});
+I.push({x:38,z:25.6,r:2.8,label:'Open van',f:()=>{if(!S.inv.card){say('The van is locked. It needs a keycard.');return}go('Inside the van, the freezers hum. Somewhere a small voice is crying...',3)}});
+P.x=ctr(1);P.z=ctr(1);P.yaw=Math.PI/2;
+R.on=true;R.x=ctr(22);R.z=ctr(12);R.m.visible=true;
+say('Explore spooky places. The van is somewhere on the street. Rod walks these grounds.',5)}
+else{
 lamp(ctr(3),ctr(1),0xaaccff,1,12,1);lamp(ctr(14),ctr(3),0xcce0ff,1,12,1);lamp(ctr(7),ctr(5),0xaaccff,1,12,1);lamp(ctr(16),ctr(7),0xcce0ff,1,12,1);
 const fz=M(0x9fd0ee,0x14323f);
 for(const[x,y]of[[6,3],[13,5],[3,7],[14,1],[9,5]]){B(1.6,1.7,.8,fz,ctr(x),.85,y*CS+.45);hideSpot(ctr(x),y*CS+.5)}
 [[10,1],[3,3],[17,5],[8,7]].forEach(p=>item('k','Key',0xffdd33,ctr(p[0]),1,ctr(p[1]),'Take key','Van key found.'));
 item('bat','Battery',0x66ccff,ctr(15),1,ctr(3),0,'Battery. That should power the rear door lock.');
 const cg=new T.Mesh(new T.BoxGeometry(1.7,1.9,1.7),new T.MeshBasicMaterial({color:0x8899aa,wireframe:true}));cg.position.set(ctr(19),.95,ctr(1));Lg.add(cg);
-charlie=new T.Group();const cm=new T.Mesh(new T.BoxGeometry(.5,.8,.3),M(0x4477cc,0x112244)),ch2=new T.Mesh(new T.SphereGeometry(.2,8,8),M(0xf0c8a0,0x221a14));cm.position.y=.6;ch2.position.y=1.2;charlie.add(cm,ch2);charlie.position.set(ctr(19),0,ctr(1));Lg.add(charlie);
-I.push({x:ctr(19),z:ctr(1),r:2.6,label:'Unlock cage',f:q=>{if(S.keys<4){say(`The cage lock needs 4 keys (${S.keys}/4).`);return}S.freed=true;q.gone=true;Lg.remove(cg);say('"J.! I knew you\'d come!" Now get him out the rear door.',4);hud()}});
+charlie=new T.Group();const cm=new T.Mesh(new T.BoxGeometry(.5,.8,.3),M(0x7fd0ff,0x1a4a66)),ch2=new T.Mesh(new T.SphereGeometry(.2,8,8),M(0xa8e4ff,0x2a5a70));cm.position.y=.6;ch2.position.y=1.2;charlie.add(cm,ch2);charlie.position.set(ctr(19),0,ctr(1));Lg.add(charlie);
+I.push({x:ctr(19),z:ctr(1),r:2.6,label:'Unlock cage',f:q=>{if(S.keys<4){say(`The cage lock needs 4 keys (${S.keys}/4).`);return}S.freed=true;q.gone=true;Lg.remove(cg);say('The ice cracks. "J.! I knew you would come!" Now get him out the rear door.',4);hud()}});
 I.push({x:ctr(0),z:ctr(7),r:2.7,label:'Open rear door',f:rear});
 P.x=ctr(1);P.z=ctr(7);P.yaw=-Math.PI/2;
 R.on=true;R.x=ctr(19);R.z=ctr(5);R.m.visible=true;
@@ -148,8 +182,7 @@ if(n>ld())sv(n);hud()}
 function out(k){
 if(!S.inv[k]){say(k=='key'?'Locked. The key has to be somewhere in the house.':"The garage door won't budge. It needs its remote.");return}
 if(!S.inv.bar){say("You'll need something to pry open the van. The crowbar...");return}
-S.go=true;const f=$('fade');f.textContent="You slip out into the night. The crowbar bites into the van's rear door...";f.style.opacity=1;
-setTimeout(()=>{build(2);f.textContent='';f.style.opacity=0},2600)}
+go("You slip out into the night. Rod's van is somewhere out there...",2)}
 function hideT(o){
 if(P.hid){P.x=o.px;P.z=o.pz;P.hid=null;say('',.1);return}
 if(R.on&&R.see&&R.s=='chase'){say("He's watching you. You can't hide!");return}
@@ -158,7 +191,7 @@ function rear(){
 if(!S.freed){say("You can't leave Charlie behind.");return}
 if(!S.inv.bat){say('The door latched behind you. Its lock panel is dead and needs a battery.');return}
 S.end=true;sv(0);
-ov(`<div style="background:#d8a050;padding:8px;border:6px solid #2a1a10"><svg width="120" height="190" viewBox="0 0 140 220"><g fill="#000"><ellipse cx="52" cy="28" rx="10" ry="34" transform="rotate(-8 52 28)"/><ellipse cx="88" cy="28" rx="10" ry="34" transform="rotate(8 88 28)"/><circle cx="70" cy="80" r="30"/><rect x="38" y="108" width="64" height="112" rx="14"/></g><g fill="#d22"><circle cx="60" cy="76" r="3"/><circle cx="80" cy="76" r="3"/><rect x="54" y="92" width="32" height="3" rx="1.5"/></g></svg></div><p>You and Charlie stumble into the street and run home. Behind you, a silhouette stands in the van's window, watching.</p><p style="background:#efe3c0;color:#222;padding:14px 22px;transform:rotate(-2deg);font-size:22px;font-family:cursive">See you next season.</p><p>ICE SCREAM: PART 1 - END</p>`,'Play again',()=>start(1))}
+ov(`<div style="background:#d8a050;padding:8px;border:6px solid #2a1a10"><svg width="120" height="190" viewBox="0 0 140 220"><g fill="#000"><ellipse cx="70" cy="62" rx="26" ry="38"/><rect x="38" y="108" width="64" height="112" rx="14"/></g><g fill="#d22"><circle cx="60" cy="76" r="3"/><circle cx="80" cy="76" r="3"/><rect x="54" y="92" width="32" height="3" rx="1.5"/></g></svg></div><p>You and Charlie stumble into the street and run home. Behind you, a silhouette stands in the van's window, watching.</p><p style="background:#efe3c0;color:#222;padding:14px 22px;transform:rotate(-2deg);font-size:22px;font-family:cursive">See you next season.</p><p>ICE SCREAM: PART 1 - END</p>`,'Play again',()=>start(1))}
 function act(){if(S.play&&!S.over&&!S.go&&!S.end&&cur)cur.f(cur)}
 function dead(){if(S.over)return;S.over=true;S.ch=false;$('tint').style.opacity=.9;ov("<h1>CAUGHT</h1><p>Rod's smile is the last thing you see.</p>",'Try again',()=>{$('tint').style.opacity=0;build(S.lvl)})}
 /* ---------- Rod AI: patrol / investigate / chase / search ---------- */
@@ -220,9 +253,11 @@ cd.addEventListener('touchend',te);cd.addEventListener('touchcancel',te);
 for(const[id,fn]of[['bE',act],['bR',()=>{S.run=!S.run;$('bR').style.background=S.run?'#a22':''}],['bC',()=>{if(!P.hid)P.crouch=!P.crouch}]])$(id).addEventListener('pointerdown',e=>{e.preventDefault();fn()});
 /* ---------- overlays / boot ---------- */
 function ov(h,l,f,l2,f2){const o=$('ov');o.innerHTML=h+'<button id="ob">'+l+'</button>'+(l2?'<button id="ob2">'+l2+'</button>':'');o.style.display='flex';$('ob').onclick=()=>{o.style.display='none';f()};if(l2)$('ob2').onclick=()=>{o.style.display='none';f2()}}
-function start(n){if(!AC)aud();else if(AC.resume)AC.resume();S.play=true;build(n)}
+const IN={1:['Rod has kidnapped your best friend','Get out of your room and help him!'],2:['Explore spooky places','Complete mysterious puzzles']};
+function start(n){if(!AC)aud();else if(AC.resume)AC.resume();S.play=true;build(n);const t=IN[n];
+if(t){S.go=true;const f=$('fade');f.style.transition='none';f.style.opacity=1;f.textContent=t[0];setTimeout(()=>{f.textContent=t[1]},2200);setTimeout(()=>{f.style.transition='opacity 1.2s';f.style.opacity=0;f.textContent='';S.go=false},4400)}}
 function loop(){requestAnimationFrame(loop);const dt=Math.min(clk.getDelta(),.05);try{if(S.play)upd(dt)}catch(e){console.error(e)}ren.render(scene,cam)}
-ov('<h1>ICE SCREAM</h1><h3>Part 1</h3><p>Charlie is gone. You saw the van. Your parents are out.</p><p>WASD move / drag mouse to look / Shift sprint / C crouch / E interact<br>Mobile: left thumb moves, right thumb looks, use the buttons.<br>Sprinting is loud. Hide in closets and under beds.</p>','Start',()=>start(1),ld()>=2?'Continue (Level 2)':null,()=>start(2));
+ov('<h1>ICE SCREAM</h1><h3>Part 1</h3><p>Rod has kidnapped Charlie Owens and frozen him. You are J. Brown. Find a way into the van.</p><p>WASD move / drag mouse to look / Shift sprint / C crouch / E interact<br>Mobile: left thumb moves, right thumb looks, use the buttons.<br>Sprinting is loud. Hide in closets and under beds.</p>','Start',()=>start(1),ld()>=2?'Continue (Level '+ld()+')':null,()=>start(ld()));
 loop();
 })();
 </script></body></html>
